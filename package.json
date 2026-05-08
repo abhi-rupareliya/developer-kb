@@ -4,21 +4,48 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "inngest": "inngest-cli dev",
+    "codegen": "graphql-codegen",
+    "codegen:watch": "graphql-codegen --watch",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.68",
+    "@ai-sdk/openai": "^3.0.62",
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/next": "^4.1.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.3",
+    "ai": "^6.0.175",
+    "graphql": "^16.14.0",
+    "graphql-tag": "^2.12.6",
+    "graphql-type-json": "^0.3.2",
+    "gray-matter": "^4.0.3",
+    "inngest": "^4.3.0",
+    "mammoth": "^1.12.0",
     "next": "16.2.5",
+    "pdf-parse": "^2.4.5",
+    "pino": "^10.3.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^7.0.0",
+    "@graphql-codegen/typed-document-node": "^7.0.0",
+    "@graphql-codegen/typescript": "^6.0.1",
+    "@graphql-codegen/typescript-operations": "^6.0.1",
+    "@graphql-codegen/typescript-react-apollo": "^4.4.2",
+    "@graphql-codegen/typescript-resolvers": "^6.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.5",
+    "inngest-cli": "^1.19.2",
     "typescript": "^5"
   }
 }
