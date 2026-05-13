@@ -1,48 +1,30 @@
-'use client';
+'use client'
 
+import { MoreVertical, CloudUpload, Eye, Trash2, AlertCircle, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
-  Box,
-  Button,
-  Checkbox,
-  Divider,
-  IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Skeleton,
-  Stack,
-  Chip,
-  Typography,
-} from '@mui/material';
-import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
-import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
-import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
-import { UploadModal } from './UploadModal';
-import { useDocumentsSidebar } from './useDocumentsSidebar';
-import { AppPanel } from '@/components/ui/AppPanel';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { StatusChip } from '@/components/ui/StatusChip';
-import { DocumentTypeIcon } from './DocumentTypeIcon';
-import { AppSnackbar } from '@/components/ui/AppSnackbar';
-import Link from 'next/link';
-import { useState } from 'react';
-import { Document } from '@/types/graphql';
-
-function getStatusChip(document: Document) {
-  switch (document.processing_status) {
-    case 'failed':
-      return <StatusChip status="error" label="Failed" icon={<ErrorOutlineRoundedIcon fontSize="small" />} />;
-    default:
-      return null;
-  }
-}
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { UploadModal } from './UploadModal'
+import { useDocumentsSidebar } from './useDocumentsSidebar'
+import { DocumentTypeIcon } from './DocumentTypeIcon'
+import Link from 'next/link'
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export function DocumentsSidebar() {
   const {
@@ -51,224 +33,196 @@ export function DocumentsSidebar() {
     error,
     selectedDocumentIds,
     toggleDocumentSelection,
-    menuAnchor,
     selectedDocumentId,
     uploadModalOpen,
     setUploadModalOpen,
-    handleMenuOpen,
-    handleMenuClose,
     handleDeleteDocument,
     handleUploadSuccess,
-  } = useDocumentsSidebar();
+    setSelectedDocumentId
+  } = useDocumentsSidebar()
 
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
-  const openDeleteConfirm = () => {
-    setConfirmDeleteOpen(true);
-    handleMenuClose();
-  };
+  const openDeleteConfirm = (id: string) => {
+    setSelectedDocumentId(id)
+    setConfirmDeleteOpen(true)
+  }
+
+  if (error) {
+    return (
+      <div className='flex flex-col items-center justify-center h-full p-6 text-center space-y-4'>
+        <div className='p-3 rounded-full bg-destructive/10'>
+          <AlertCircle className='w-10 h-10 text-destructive' />
+        </div>
+        <div>
+          <h3 className='text-lg font-semibold'>Could not load documents</h3>
+          <p className='text-sm text-muted-foreground mt-1'>{error.message}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <AppPanel dense sx={{ height: '100%' }}>
-      <Stack sx={{ flex: 1, minHeight: 0 }}>
-        <Box sx={{ p: 1.5 }}>
-          <SectionHeader
-            title="Documents"
-            subtitle={`${selectedDocumentIds.length} selected`}
-            action={
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<CloudUploadRoundedIcon />}
-                onClick={() => setUploadModalOpen(true)}
-              >
-                Upload
-              </Button>
-            }
-          />
-        </Box>
+    <div className='flex flex-col h-full bg-background'>
+      <div className='p-4 flex items-center justify-between gap-4'>
+        <div>
+          <h2 className='text-lg font-semibold tracking-tight'>Documents</h2>
+          <p className='text-xs text-muted-foreground'>{selectedDocumentIds.length} selected for grounding</p>
+        </div>
+        <Button size='sm' onClick={() => setUploadModalOpen(true)} className='gap-2 rounded-full px-4'>
+          <CloudUpload className='w-4 h-4' />
+          Upload
+        </Button>
+      </div>
 
-        <Divider />
+      <Separator />
 
-        <Box sx={{ flex: 1, overflow: 'auto', p: 1.25 }}>
+      <ScrollArea className='flex-1'>
+        <div className='p-3 space-y-1'>
           {loading ? (
-            <Stack spacing={1}>
-              <Skeleton variant="rounded" height={40} />
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} variant="rounded" height={64} />
+            <div className='space-y-2'>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className='h-16 w-full rounded-xl' />
               ))}
-            </Stack>
-          ) : error ? (
-            <EmptyState
-              title="Could not load documents"
-              description={error.message}
-            />
+            </div>
           ) : documents.length === 0 ? (
-            <EmptyState
-              title="No documents yet"
-              description="Upload files to start grounding your conversations in source material."
-              action={{ label: 'Upload documents', onClick: () => setUploadModalOpen(true) }}
-            />
+            <div className='flex flex-col items-center justify-center py-20 text-center px-4'>
+              <div className='p-4 rounded-full bg-muted/30 mb-4'>
+                <FileText className='w-8 h-8 text-muted-foreground/50' />
+              </div>
+              <h3 className='text-sm font-medium'>No documents yet</h3>
+              <p className='text-xs text-muted-foreground mt-1 mb-4'>
+                Upload files to start grounding your conversations.
+              </p>
+              <Button variant='outline' size='sm' onClick={() => setUploadModalOpen(true)}>
+                Upload files
+              </Button>
+            </div>
           ) : (
-            <List disablePadding sx={{ display: 'grid', gap: 0.75 }}>
-              {documents.map((document) => {
-                const isSelected = selectedDocumentIds.includes(document.id);
+            documents.map(document => {
+              const isSelected = selectedDocumentIds.includes(document.id)
+              const isFailed = document.processing_status === 'failed'
+              const isProcessing =
+                document.processing_status === 'processing' || document.processing_status === 'pending'
 
-                return (
-                   <ListItem
-                    key={document.id}
-                    disablePadding
-                    sx={{
-                      '& .MuiListItemSecondaryAction-root': {
-                        opacity: 0,
-                        transition: 'opacity 0.2s',
-                        pointerEvents: 'none',
-                      },
-                      '&:hover .MuiListItemSecondaryAction-root': {
-                        opacity: 1,
-                        pointerEvents: 'auto',
-                      },
-                      ...(selectedDocumentId === document.id && Boolean(menuAnchor) && {
-                        '& .MuiListItemSecondaryAction-root': {
-                          opacity: 1,
-                          pointerEvents: 'auto',
-                        },
-                      }),
-                      minWidth: 0,
-                      "& .MuiListItemButton-root": {
-                        pr: 1.5,
-                        transition: "padding-right 0.2s ease",
-                      },
-                      "&:hover .MuiListItemButton-root": {
-                        pr: 5,
-                      },
-                      ...(selectedDocumentId === document.id &&
-                        Boolean(menuAnchor) && {
-                          "& .MuiListItemButton-root": {
-                            pr: 5,
-                          },
-                        }),
-                    }}
-                    secondaryAction={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={(event) => handleMenuOpen(event, document.id)}
-                          aria-label={`Actions for ${document.title || document.original_file_name}`}
-                        >
-                          <MoreVertRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    }
+              return (
+                <div
+                  key={document.id}
+                  className={cn(
+                    'group relative flex items-start gap-3 p-3 rounded-xl transition-all duration-200 border border-transparent hover:bg-secondary/50',
+                    isSelected && 'bg-secondary/80 border-secondary-foreground/10'
+                  )}
+                >
+                  <div className='pt-1'>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleDocumentSelection(document.id)}
+                      className='rounded-md'
+                    />
+                  </div>
+
+                  <div
+                    className='flex-1 min-w-0 space-y-1 cursor-pointer'
+                    onClick={() => toggleDocumentSelection(document.id)}
                   >
-                    <ListItemButton
-                      onClick={() => toggleDocumentSelection(document.id)}
-                      selected={isSelected}
-                      disableRipple
-                      sx={{
-                        alignItems: 'center',
-                        minWidth: 0,
-                      }}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        tabIndex={-1}
-                        disableRipple
-                        size='small'
-                        onClick={(event) => event.stopPropagation()}
-                        onChange={() => toggleDocumentSelection(document.id)}
-                        sx={{ mt: -0.5 }}
+                    <div className='flex items-center gap-2 min-w-0'>
+                      <DocumentTypeIcon
+                        mimeType={document.mime_type}
+                        fileName={document.original_file_name}
+                        className='w-4 h-4 shrink-0'
                       />
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, flex: 1 }}>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 }}>
-                          <DocumentTypeIcon
-                            mimeType={document.mime_type}
-                            fileName={document.original_file_name}
-                            fontSize="small"
-                            color="action"
-                          />
-                          <ListItemText
-                            sx={{ m: 0, minWidth: 0 }}
-                            primary={
-                              <Typography
-                                variant="body2"
-                                noWrap
-                                sx={{
-                                  display: 'block',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {document.title || document.original_file_name}
-                              </Typography>
-                            }
-                          />
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
-                          {getStatusChip(document)}
-                          {document.file_size ? (
-                            <Chip size="small" label={`${Math.max(1, Math.round(document.file_size / 1024))} KB`} variant="outlined" />
-                          ) : null}
-                        </Box>
-                      </Box>
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
+                      <span className='text-sm font-medium truncate leading-none'>
+                        {document.title || document.original_file_name}
+                      </span>
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                      {isFailed && (
+                        <Badge
+                          variant='destructive'
+                          className='h-4 px-1.5 text-[10px] uppercase font-bold tracking-wider'
+                        >
+                          Failed
+                        </Badge>
+                      )}
+                      {isProcessing && (
+                        <Badge
+                          variant='outline'
+                          className='h-4 px-1.5 text-[10px] uppercase font-bold tracking-wider animate-pulse'
+                        >
+                          Processing
+                        </Badge>
+                      )}
+                      {document.file_size && (
+                        <span className='text-[10px] text-muted-foreground uppercase font-medium'>
+                          {Math.max(1, Math.round(document.file_size / 1024))} KB
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button variant='ghost' size='icon' className='h-8 w-8 rounded-full'>
+                          <MoreVertical className='w-4 h-4' />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align='end' className='w-48'>
+                        <DropdownMenuItem>
+                          <Link href={`/documents/${document.id}`} className='flex items-center gap-2'>
+                            <Eye className='w-4 h-4' />
+                            View details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className='text-red-500 dark:text-red-400 focus:bg-red-500/10 focus:text-red-500 dark:focus:text-red-400 flex items-center gap-2'
+                          onClick={() => openDeleteConfirm(document.id)}
+                        >
+                          <Trash2 className='w-4 h-4' />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )
+            })
           )}
-        </Box>
-      </Stack>
+        </div>
+      </ScrollArea>
 
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}>
-        <MenuItem component={Link} href={`/documents/${selectedDocumentId}`} onClick={handleMenuClose}>
-          <VisibilityOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-          View document
-        </MenuItem>
-        <MenuItem onClick={openDeleteConfirm}>
-          <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete document
-        </MenuItem>
-      </Menu>
-
-      <ConfirmationDialog
-        open={confirmDeleteOpen}
-        title="Delete document?"
-        description="This document will be removed from the knowledge base and cannot be restored."
-        confirmLabel="Delete"
-        destructive
-        onConfirm={async () => {
-          await handleDeleteDocument();
-          setConfirmDeleteOpen(false);
-        }}
-        onClose={() => setConfirmDeleteOpen(false)}
-      />
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This document will be removed from the knowledge base and cannot be restored.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedDocumentId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+              onClick={async () => {
+                await handleDeleteDocument()
+                toast.success('Document deleted')
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <UploadModal
         open={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
-        onUploadSuccess={(uploaded) => {
-          handleUploadSuccess();
-          setSnackbar({
-            open: true,
-            message: `${uploaded.length} document${uploaded.length === 1 ? '' : 's'} uploaded successfully.`,
-            severity: 'success',
-          });
+        onUploadSuccess={uploaded => {
+          handleUploadSuccess()
+          toast.success(`${uploaded.length} document${uploaded.length === 1 ? '' : 's'} uploaded successfully.`)
         }}
       />
-
-      <AppSnackbar
-        open={snackbar.open}
-        message={snackbar.message}
-        severity={snackbar.severity}
-        onClose={() => setSnackbar((current) => ({ ...current, open: false }))}
-      />
-    </AppPanel>
-  );
+    </div>
+  )
 }

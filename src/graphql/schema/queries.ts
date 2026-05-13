@@ -1,4 +1,4 @@
-import gql from "graphql-tag";
+import gql from 'graphql-tag'
 
 export const queryTypeDefs = gql`
   type Query {
@@ -7,4 +7,4 @@ export const queryTypeDefs = gql`
     documentStatus(id: ID!): String!
     queryDocuments(query: String!): [DocumentChunk!]!
   }
-`;
+`

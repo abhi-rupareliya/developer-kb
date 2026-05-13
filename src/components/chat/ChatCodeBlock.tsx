@@ -1,73 +1,62 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Box, IconButton, Tooltip, Typography } from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useState } from 'react'
+import { Check, Copy } from 'lucide-react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type ChatCodeBlockProps = {
-  language?: string;
-  children: string;
-};
+  language?: string
+  children: string
+}
 
 export function ChatCodeBlock({ language, children }: ChatCodeBlockProps) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(children);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  };
+    await navigator.clipboard.writeText(children)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
-    <Box sx={{ position: "relative", my: 1.5, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: 1.5,
-          py: 1,
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
-          border: "1px solid",
-          borderColor: "divider",
-          borderBottom: 0,
-          bgcolor: "rgba(15, 23, 42, 0.92)",
-        }}
-      >
-        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.72)" }}>
-          {language || "code"}
-        </Typography>
-        <Tooltip title={copied ? "Copied" : "Copy code"}>
-          <IconButton
-            size="small"
-            onClick={handleCopy}
-            sx={{ color: "rgba(255,255,255,0.72)" }}
-          >
-            <ContentCopyIcon fontSize="inherit" />
-          </IconButton>
+    <div className='relative my-4 w-full group overflow-hidden rounded-xl border border-border/50 shadow-sm'>
+      <div className='flex items-center justify-between px-4 py-2 bg-zinc-900 text-zinc-400 border-b border-zinc-800'>
+        <span className='text-xs font-mono lowercase'>{language || 'code'}</span>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-7 w-7 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
+              onClick={handleCopy}
+            >
+              {copied ? <Check className='h-3.5 w-3.5 text-green-500' /> : <Copy className='h-3.5 w-3.5' />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side='left' className='bg-zinc-800 border-zinc-700 text-zinc-100'>
+            {copied ? 'Copied!' : 'Copy code'}
+          </TooltipContent>
         </Tooltip>
-      </Box>
-      <SyntaxHighlighter
-        style={vscDarkPlus}
-        language={language}
-        PreTag="div"
-        customStyle={{
-          margin: 0,
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          borderBottomLeftRadius: 12,
-          borderBottomRightRadius: 12,
-          fontSize: "12px",
-          lineHeight: 1.6,
-          overflowX: "auto",
-          whiteSpace: "pre",
-        }}
-      >
-        {children.replace(/\n$/, "")}
-      </SyntaxHighlighter>
-    </Box>
-  );
+      </div>
+      <div className='bg-[#1e1e1e] overflow-x-auto custom-scrollbar'>
+        <SyntaxHighlighter
+          style={vscDarkPlus}
+          language={language}
+          PreTag='div'
+          customStyle={{
+            margin: 0,
+            padding: '1rem',
+            background: 'transparent',
+            fontSize: '13px',
+            lineHeight: 1.6
+          }}
+        >
+          {children.replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      </div>
+    </div>
+  )
 }

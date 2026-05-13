@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client/core';
+import { gql } from '@apollo/client/core'
 
 export const GET_CHATS = gql`
   query GetChats {
@@ -9,7 +9,7 @@ export const GET_CHATS = gql`
       updated_at
     }
   }
-`;
+`
 
 export const GET_CHAT = gql`
   query GetChat($id: ID!) {
@@ -20,7 +20,7 @@ export const GET_CHAT = gql`
       updated_at
     }
   }
-`;
+`
 
 export const GET_MESSAGES = gql`
   query GetMessages($chatId: ID!, $page: Int, $limit: Int) {
@@ -39,7 +39,7 @@ export const GET_MESSAGES = gql`
       hasMore
     }
   }
-`;
+`
 
 export const GET_DOCUMENTS = gql`
   query GetDocuments {
@@ -52,4 +52,4 @@ export const GET_DOCUMENTS = gql`
       processing_status
     }
   }
-`;
+`

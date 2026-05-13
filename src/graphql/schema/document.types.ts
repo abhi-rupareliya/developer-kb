@@ -1,4 +1,4 @@
-import gql from "graphql-tag";
+import gql from 'graphql-tag'
 
 export const documentTypeDefs = gql`
   scalar JSON
@@ -27,4 +27,4 @@ export const documentTypeDefs = gql`
     document(id: ID!): Document
     documentStatus(id: ID!): String!
   }
-`;
+`

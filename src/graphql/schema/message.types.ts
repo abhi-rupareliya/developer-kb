@@ -1,4 +1,4 @@
-import { gql } from "graphql-tag";
+import { gql } from 'graphql-tag'
 
 export const messageTypeDefs = gql`
   scalar JSON
@@ -41,4 +41,4 @@ export const messageTypeDefs = gql`
     createMessage(input: CreateMessageInput!): Message!
     deleteMessage(id: ID!): DeleteMessageResponse!
   }
-`;
+`

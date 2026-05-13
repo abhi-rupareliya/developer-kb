@@ -1,4 +1,4 @@
-import gql from "graphql-tag";
+import gql from 'graphql-tag'
 
 export const documentChunkTypeDefs = gql`
   scalar JSON
@@ -12,4 +12,4 @@ export const documentChunkTypeDefs = gql`
     content: ID!
     similarity: Float!
   }
-`;
+`

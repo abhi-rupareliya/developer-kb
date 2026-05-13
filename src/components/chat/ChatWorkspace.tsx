@@ -1,81 +1,86 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Box, Stack, Tab, Tabs, useMediaQuery, useTheme } from '@mui/material';
-import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import { ChatHistorySidebar } from '@/components/history/ChatHistorySidebar';
-import { ChatMessages } from '@/components/chat/ChatMessages';
-import { DocumentsSidebar } from '@/components/documents/DocumentsSidebar';
+import { useState } from 'react'
+import { ChatHistorySidebar } from '@/components/history/ChatHistorySidebar'
+import { ChatMessages } from '@/components/chat/ChatMessages'
+import { DocumentsSidebar } from '@/components/documents/DocumentsSidebar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MessageSquare, History, FileText } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 type ChatWorkspaceProps = {
-  activeChatId: string | null;
-  isDraftChat: boolean;
-};
-
-type MobileTab = 'chat' | 'history' | 'documents';
-
-export function ChatWorkspace({ activeChatId, isDraftChat }: ChatWorkspaceProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileTab, setMobileTab] = useState<MobileTab>('chat');
-
-  return (
-    <Box
-      sx={{
-        height: '100dvh',
-        overflow: 'hidden',
-        bgcolor: 'background.default',
-      }}
-    >
-      {isMobile ? (
-        <Stack sx={{ height: '100%' }}>
-          <Box sx={{ flex: 1, minHeight: 0, p: 0.5 }}>
-            {mobileTab === 'chat' ? (
-              <ChatMessages activeChatId={activeChatId} isDraftChat={isDraftChat} />
-            ) : null}
-            {mobileTab === 'history' ? <ChatHistorySidebar activeChatId={activeChatId} /> : null}
-            {mobileTab === 'documents' ? <DocumentsSidebar /> : null}
-          </Box>
-          
-          <Tabs
-            value={mobileTab}
-            onChange={(_, nextTab: MobileTab) => setMobileTab(nextTab)}
-            variant="fullWidth"
-            sx={{
-              bgcolor: 'background.paper',
-              borderTop: '1px solid',
-              borderColor: 'divider',
-              minHeight: 56,
-            }}
-          >
-            <Tab icon={<ForumOutlinedIcon fontSize="small" />} value="chat" label="Chat" />
-            <Tab icon={<HistoryOutlinedIcon fontSize="small" />} value="history" label="History" />
-            <Tab icon={<DescriptionOutlinedIcon fontSize="small" />} value="documents" label="Docs" />
-          </Tabs>
-        </Stack>
-      ) : (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: '260px minmax(0, 1fr) 300px',
-            alignItems: 'stretch',
-            height: '100%',
-          }}
-        >
-          <Box sx={{ minHeight: 0, height: '100%', borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-            <ChatHistorySidebar activeChatId={activeChatId} />
-          </Box>
-          <Box sx={{ minWidth: 0, minHeight: 0, height: '100%', bgcolor: 'background.default' }}>
-            <ChatMessages activeChatId={activeChatId} isDraftChat={isDraftChat} />
-          </Box>
-          <Box sx={{ minHeight: 0, height: '100%', borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-            <DocumentsSidebar />
-          </Box>
-        </Box>
-      )}
-    </Box>
-  );
+  activeChatId: string | null
+  isDraftChat: boolean
 }
 
+export function ChatWorkspace({ activeChatId, isDraftChat }: ChatWorkspaceProps) {
+  const isMobile = useIsMobile()
+  const [historyOpen, setHistoryOpen] = useState(true)
+
+  if (isMobile) {
+    return (
+      <div className='flex h-screen w-full overflow-hidden bg-background'>
+        <Tabs defaultValue='chat' className='flex flex-col h-full w-full'>
+          <div className='px-4 py-2 border-b shrink-0'>
+            <TabsList className='grid w-full grid-cols-3'>
+              <TabsTrigger value='chat' className='flex items-center gap-2'>
+                <MessageSquare className='size-4' />
+                <span>Chat</span>
+              </TabsTrigger>
+              <TabsTrigger value='history' className='flex items-center gap-2'>
+                <History className='size-4' />
+                <span>History</span>
+              </TabsTrigger>
+              <TabsTrigger value='documents' className='flex items-center gap-2'>
+                <FileText className='size-4' />
+                <span>Docs</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <div className='flex-1 overflow-hidden'>
+            <TabsContent value='chat' className='h-full m-0 data-[state=inactive]:hidden'>
+              <ChatMessages
+                activeChatId={activeChatId}
+                isDraftChat={isDraftChat}
+                historyOpen={false}
+                onToggleHistory={() => {}}
+              />
+            </TabsContent>
+            <TabsContent value='history' className='h-full m-0 data-[state=inactive]:hidden'>
+              <ChatHistorySidebar activeChatId={activeChatId} />
+            </TabsContent>
+            <TabsContent value='documents' className='h-full m-0 data-[state=inactive]:hidden'>
+              <DocumentsSidebar />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+    )
+  }
+
+  return (
+    <div className='flex h-screen w-full overflow-hidden bg-background'>
+      {/* History sidebar — plain flex panel */}
+      {historyOpen && (
+        <div className='w-[260px] shrink-0 border-r flex flex-col overflow-hidden'>
+          <ChatHistorySidebar activeChatId={activeChatId} />
+        </div>
+      )}
+
+      {/* Chat area */}
+      <div className='flex-1 min-w-0 h-full overflow-hidden'>
+        <ChatMessages
+          activeChatId={activeChatId}
+          isDraftChat={isDraftChat}
+          historyOpen={historyOpen}
+          onToggleHistory={() => setHistoryOpen(prev => !prev)}
+        />
+      </div>
+
+      {/* Documents sidebar */}
+      <div className='w-[300px] shrink-0 border-l hidden xl:flex xl:flex-col overflow-hidden'>
+        <DocumentsSidebar />
+      </div>
+    </div>
+  )
+}

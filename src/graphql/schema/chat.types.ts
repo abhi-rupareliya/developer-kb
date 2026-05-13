@@ -1,4 +1,4 @@
-import { gql } from "graphql-tag";
+import { gql } from 'graphql-tag'
 
 export const chatTypeDefs = gql`
   scalar JSON
@@ -38,4 +38,4 @@ export const chatTypeDefs = gql`
     updateChat(id: ID!, input: UpdateChatInput!): CreateChatResponse!
     deleteChat(id: ID!): DeleteResponse!
   }
-`;
+`

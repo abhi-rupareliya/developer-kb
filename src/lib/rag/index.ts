@@ -1,9 +1,9 @@
-import { AI } from "@/constants/ai";
-import { google } from "@ai-sdk/google";
+import { AI } from '@/constants/ai'
+import { google } from '@ai-sdk/google'
 
-import { embed } from "ai";
-import { createClient } from "../supabase/server";
-import { cookies } from "next/headers";
+import { embed } from 'ai'
+import { createClient } from '../supabase/server'
+import { cookies } from 'next/headers'
 
 export async function embedText(text: string) {
   const { embedding } = await embed({
@@ -11,72 +11,67 @@ export async function embedText(text: string) {
     value: text,
     providerOptions: {
       google: {
-        outputDimensionality: AI.CHAT_EMBEDDING_DIMENSIONS,
-      },
-    },
-  });
+        outputDimensionality: AI.CHAT_EMBEDDING_DIMENSIONS
+      }
+    }
+  })
 
-  return embedding;
+  return embedding
 }
 
 export function chunkText(text: string, size = 800) {
-  const chunks = [];
+  const chunks = []
   for (let i = 0; i < text.length; i += size) {
-    chunks.push(text.slice(i, i + size));
+    chunks.push(text.slice(i, i + size))
   }
-  return chunks;
+  return chunks
 }
 
-export const getRelevantChunks = async (
-  embeddings: unknown,
-  documentIds: string[] = [],
-  topK = 5,
-  threshold = 0.6,
-) => {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+export const getRelevantChunks = async (embeddings: unknown, documentIds: string[] = [], topK = 5, threshold = 0.6) => {
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
 
-  let query = supabase.rpc("match_document_chunks", {
+  let query = supabase.rpc('match_document_chunks', {
     query_embedding: embeddings,
     match_count: topK,
-    match_threshold: threshold,
-  });
+    match_threshold: threshold
+  })
 
   if (documentIds.length > 0) {
-    query = query.in('document_id', documentIds);
+    query = query.in('document_id', documentIds)
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query
 
-  console.log("data: ", data);
+  console.log('data: ', data)
   if (error) {
-    throw new Error(error.message);
+    throw new Error(error.message)
   }
 
-  return data;
-};
+  return data
+}
 
 export function buildContextFromChunks(
   chunks: {
-    content: string;
-    document_id: string;
-    similarity: number;
-    document_title?: string;
-  }[],
+    content: string
+    document_id: string
+    similarity: number
+    document_title?: string
+  }[]
 ) {
   return chunks
     .map((chunk, index) => {
       return `
         [SOURCE_${index + 1}]
-        FILE: ${chunk.document_title ?? "Unknown"}
+        FILE: ${chunk.document_title ?? 'Unknown'}
         DOCUMENT_ID: ${chunk.document_id}
         SIMILARITY: ${chunk.similarity}
 
         CONTENT:
         ${chunk.content}
-        `;
+        `
     })
-    .join("\n\n---\n\n");
+    .join('\n\n---\n\n')
 }
 
 export const getSystemPrompt = () => {
@@ -144,8 +139,8 @@ export const getSystemPrompt = () => {
     - inline code formatting
 
     Keep responses practical, technical,
-    and structured.`;
-};
+    and structured.`
+}
 
 export const getPrompt = (query: string, context: string) => {
   return `
@@ -156,5 +151,5 @@ export const getPrompt = (query: string, context: string) => {
     # USER QUESTION
 
     ${query}
-    `;
-};
+    `
+}

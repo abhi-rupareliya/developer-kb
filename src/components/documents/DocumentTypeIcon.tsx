@@ -1,31 +1,29 @@
-'use client';
+'use client'
 
-import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
-import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
-import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import type { SvgIconProps } from '@mui/material';
-import { getDocumentKind } from '@/utils/documents/documentKind';
+import { FileText, FileCode, File, BookOpen, type LucideProps } from 'lucide-react'
+import { getDocumentKind } from '@/utils/documents/documentKind'
+import { cn } from '@/lib/utils'
 
 type DocumentTypeIconProps = {
-  mimeType?: string | null;
-  fileName?: string | null;
-} & SvgIconProps;
+  mimeType?: string | null
+  fileName?: string | null
+  className?: string
+} & LucideProps
 
-export function DocumentTypeIcon({ mimeType, fileName, ...props }: DocumentTypeIconProps) {
-  const kind = getDocumentKind(mimeType ?? null, fileName ?? null);
+export function DocumentTypeIcon({ mimeType, fileName, className, ...props }: DocumentTypeIconProps) {
+  const kind = getDocumentKind(mimeType ?? null, fileName ?? null)
 
   if (kind === 'pdf') {
-    return <PictureAsPdfOutlinedIcon {...props} />;
+    return <BookOpen className={cn('text-red-500', className)} {...props} />
   }
 
   if (kind === 'code' || kind === 'markdown') {
-    return <CodeOutlinedIcon {...props} />;
+    return <FileCode className={cn('text-blue-500', className)} {...props} />
   }
 
   if (kind === 'unknown') {
-    return <DescriptionOutlinedIcon {...props} />;
+    return <File className={cn('text-muted-foreground', className)} {...props} />
   }
 
-  return <ArticleOutlinedIcon {...props} />;
+  return <FileText className={cn('text-primary', className)} {...props} />
 }

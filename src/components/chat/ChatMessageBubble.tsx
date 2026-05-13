@@ -1,76 +1,48 @@
-"use client";
+'use client'
 
-import { Avatar, Box, Typography } from "@mui/material";
-import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
-import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
-import { Message } from "@/types/graphql";
-import { ChatMarkdown } from "./ChatMarkdown";
-import { TypingIndicator } from "./TypingIndicator";
+import { Message } from '@/types/graphql'
+import { ChatMarkdown } from './ChatMarkdown'
+import { TypingIndicator } from './TypingIndicator'
+import { cn } from '@/lib/utils'
 
 type ChatMessageBubbleProps = {
-  message: Message;
-  streamedContent?: string;
-};
+  message: Message
+  streamedContent?: string
+}
 
-export function ChatMessageBubble({
-  message,
-  streamedContent,
-}: ChatMessageBubbleProps) {
-  const content =
-    message.id === "streaming" ? (streamedContent ?? "") : message.content;
-  const isStreaming = message.id === "streaming";
-  const isUser = message.role === "user";
+export function ChatMessageBubble({ message, streamedContent }: ChatMessageBubbleProps) {
+  const isAssistant = message.role === 'assistant'
+  const isUser = message.role === 'user'
+  const isStreaming = message.id === 'streaming'
 
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        py: 2,
-        px: { xs: 2, md: 0 },
-        display: "flex",
-        justifyContent: "center",
-        bgcolor: isUser ? "transparent" : "background.surface",
-        borderBottom: isUser ? "none" : "1px solid",
-        borderColor: "border.subtle",
-      }}
-    >
-      <Box
-        sx={{
-          width: "100%",
-          maxWidth: 820,
-          display: "flex",
-          gap: 3,
-          alignItems: "flex-end",
-        }}
-      >
+  const content = isStreaming ? (streamedContent ?? '') : message.content
 
-        <Box sx={{ flex: 1, minWidth: 0, pt: 0.25 }}>
-          {isUser ? (
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: "pre-wrap",
-                color: "text.primary",
-                lineHeight: 1.6,
-                fontWeight: 500,
-              }}
-            >
-              {content}
-            </Typography>
-          ) : (
-            <Box
-              sx={{
-                "& p": { mt: 0, mb: 1.5, "&:last-child": { mb: 0 } },
-                "& pre": { my: 1.5 },
-                color: "text.primary",
-              }}
-            >
-              <ChatMarkdown content={content} />
-              {isStreaming ? <TypingIndicator /> : null}
-            </Box>
+  /* ── User message: right-aligned bubble ─────────────────────── */
+  if (isUser) {
+    return (
+      <div className='w-full flex justify-end px-4 md:px-6 py-3'>
+        <div
+          className={cn(
+            'max-w-[75%] rounded-3xl px-5 py-3',
+            'bg-primary text-primary-foreground',
+            'text-[15px] leading-relaxed whitespace-pre-wrap break-words'
           )}
-        </Box>
-      </Box>
-    </Box>
-  );
+        >
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Assistant / system message: full-width, no bubble ──────── */
+  return (
+    <div className='w-full py-3 px-4 md:px-6'>
+      <div className='max-w-3xl'>
+        <div className={cn('prose prose-sm dark:prose-invert max-w-none break-words', 'text-foreground')}>
+          <ChatMarkdown content={content} />
+          {isStreaming && <TypingIndicator />}
+        </div>
+      </div>
+    </div>
+  )
 }

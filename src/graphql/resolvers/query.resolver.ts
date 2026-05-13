@@ -1,143 +1,99 @@
-import { embedText } from "@/lib/rag";
-import {
-  GraphQLContext,
-  Document,
-  DocumentChunk,
-  Chat,
-  Message,
-} from "@/types/graphql";
+import { embedText } from '@/lib/rag'
+import { GraphQLContext, Document, DocumentChunk, Chat, Message } from '@/types/graphql'
 
 interface DocumentArgs {
-  id: string;
+  id: string
 }
 
 export const queryResolvers = {
   Query: {
-    documents: async (
-      _: unknown,
-      __: unknown,
-      { supabase }: GraphQLContext,
-    ): Promise<Document[]> => {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("*")
-        .order("created_at", { ascending: false });
+    documents: async (_: unknown, __: unknown, { supabase }: GraphQLContext): Promise<Document[]> => {
+      const { data, error } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data;
+      return data
     },
 
-    document: async (
-      _: unknown,
-      { id }: DocumentArgs,
-      { supabase }: GraphQLContext,
-    ): Promise<Document | null> => {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("*")
-        .eq("id", id)
-        .single();
+    document: async (_: unknown, { id }: DocumentArgs, { supabase }: GraphQLContext): Promise<Document | null> => {
+      const { data, error } = await supabase.from('documents').select('*').eq('id', id).single()
 
       if (error) {
-        if (error.code === "PGRST116") {
-          return null;
+        if (error.code === 'PGRST116') {
+          return null
         }
 
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data;
+      return data
     },
 
-    documentStatus: async (
-      _: unknown,
-      { id }: DocumentArgs,
-      { supabase }: GraphQLContext,
-    ): Promise<string> => {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("processing_status")
-        .eq("id", id)
-        .single();
+    documentStatus: async (_: unknown, { id }: DocumentArgs, { supabase }: GraphQLContext): Promise<string> => {
+      const { data, error } = await supabase.from('documents').select('processing_status').eq('id', id).single()
 
       if (error) {
-        if (error.code === "PGRST116") {
-          return "not_found";
+        if (error.code === 'PGRST116') {
+          return 'not_found'
         }
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data?.processing_status || "unknown";
+      return data?.processing_status || 'unknown'
     },
 
     queryDocuments: async (
       _: unknown,
       { query }: { query: string },
-      { supabase }: GraphQLContext,
+      { supabase }: GraphQLContext
     ): Promise<DocumentChunk[]> => {
-      const threshold = 0.6;
-      const topK = 10;
+      const threshold = 0.6
+      const topK = 10
 
-      if (!query || typeof query !== "string") {
-        throw new Error("query must be a string");
+      if (!query || typeof query !== 'string') {
+        throw new Error('query must be a string')
       }
 
       // 1. Embed query
-      const embedding = await embedText(query);
+      const embedding = await embedText(query)
 
       // 2. Query  vector DB
-      const { data, error } = await supabase.rpc("match_document_chunks", {
+      const { data, error } = await supabase.rpc('match_document_chunks', {
         query_embedding: embedding,
         match_threshold: threshold,
-        match_count: topK,
-      });
+        match_count: topK
+      })
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data || [];
+      return data || []
     },
 
-    chats: async (
-      _: unknown,
-      __: unknown,
-      { supabase }: GraphQLContext,
-    ): Promise<Chat[]> => {
-      const { data, error } = await supabase
-        .from("chats")
-        .select("*")
-        .order("created_at", { ascending: false });
+    chats: async (_: unknown, __: unknown, { supabase }: GraphQLContext): Promise<Chat[]> => {
+      const { data, error } = await supabase.from('chats').select('*').order('created_at', { ascending: false })
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data;
+      return data
     },
 
-    chat: async (
-      _: unknown,
-      { id }: { id: string },
-      { supabase }: GraphQLContext,
-    ): Promise<Chat | null> => {
-      const { data, error } = await supabase
-        .from("chats")
-        .select("*")
-        .eq("id", id)
-        .single();
+    chat: async (_: unknown, { id }: { id: string }, { supabase }: GraphQLContext): Promise<Chat | null> => {
+      const { data, error } = await supabase.from('chats').select('*').eq('id', id).single()
 
       if (error) {
-        if (error.code === "PGRST116") {
-          return null;
+        if (error.code === 'PGRST116') {
+          return null
         }
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      return data;
+      return data
     },
 
     messages: async (
@@ -145,43 +101,43 @@ export const queryResolvers = {
       {
         chatId,
         page = 1,
-        limit = 20,
+        limit = 20
       }: {
-        chatId: string;
-        page?: number;
-        limit?: number;
+        chatId: string
+        page?: number
+        limit?: number
       },
-      { supabase }: GraphQLContext,
+      { supabase }: GraphQLContext
     ): Promise<{
-      messages: Message[];
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-      hasMore: boolean;
+      messages: Message[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+      hasMore: boolean
     }> => {
-      const from = (page - 1) * limit;
+      const from = (page - 1) * limit
 
-      const to = from + limit - 1;
+      const to = from + limit - 1
 
       const { data, error, count } = await supabase
-        .from("messages")
-        .select("*", {
-          count: "exact",
+        .from('messages')
+        .select('*', {
+          count: 'exact'
         })
-        .eq("chat_id", chatId)
-        .order("created_at", {
-          ascending: true,
+        .eq('chat_id', chatId)
+        .order('created_at', {
+          ascending: true
         })
-        .range(from, to);
+        .range(from, to)
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message)
       }
 
-      const total = count || 0;
+      const total = count || 0
 
-      const totalPages = Math.ceil(total / limit);
+      const totalPages = Math.ceil(total / limit)
 
       return {
         messages: data || [],
@@ -189,8 +145,8 @@ export const queryResolvers = {
         page,
         limit,
         totalPages,
-        hasMore: page < totalPages,
-      };
-    },
-  },
-};
+        hasMore: page < totalPages
+      }
+    }
+  }
+}

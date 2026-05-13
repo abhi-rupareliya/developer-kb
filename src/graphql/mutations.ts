@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client/core';
+import { gql } from '@apollo/client/core'
 
 export const CREATE_CHAT = gql`
   mutation CreateChat($input: CreateChatInput!) {
@@ -12,7 +12,7 @@ export const CREATE_CHAT = gql`
       }
     }
   }
-`;
+`
 
 export const CREATE_MESSAGE = gql`
   mutation CreateMessage($input: CreateMessageInput!) {
@@ -24,7 +24,7 @@ export const CREATE_MESSAGE = gql`
       created_at
     }
   }
-`;
+`
 
 export const DELETE_CHAT = gql`
   mutation DeleteChat($id: ID!) {
@@ -33,7 +33,7 @@ export const DELETE_CHAT = gql`
       message
     }
   }
-`;
+`
 
 export const DELETE_DOCUMENT = gql`
   mutation DeleteDocument($id: ID!) {
@@ -42,4 +42,4 @@ export const DELETE_DOCUMENT = gql`
       message
     }
   }
-`;
+`

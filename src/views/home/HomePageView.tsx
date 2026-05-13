@@ -1,12 +1,12 @@
-"use client";
+'use client'
 
-import { ChatWorkspace } from "@/components/chat/ChatWorkspace";
+import { ChatWorkspace } from '@/components/chat/ChatWorkspace'
 
 type HomePageViewProps = {
-  activeChatId: string | null;
-  isDraftChat: boolean;
-};
+  activeChatId: string | null
+  isDraftChat: boolean
+}
 
 export function HomePageView({ activeChatId, isDraftChat }: HomePageViewProps) {
-  return <ChatWorkspace activeChatId={activeChatId} isDraftChat={isDraftChat} />;
+  return <ChatWorkspace activeChatId={activeChatId} isDraftChat={isDraftChat} />
 }
