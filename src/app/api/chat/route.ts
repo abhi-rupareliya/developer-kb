@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const question = body.question?.trim();
+    const documentIds = body.documentIds || [];
 
     if (!question) {
       return Response.json(
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     const embeddings = await embedText(question);
 
     // 2. Retrieve relevant chunks
-    const relevantChunks = await getRelevantChunks(embeddings);
+    const relevantChunks = await getRelevantChunks(embeddings, documentIds);
 
     // 3. Build structured context
     const context = buildContextFromChunks(relevantChunks);

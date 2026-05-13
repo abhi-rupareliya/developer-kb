@@ -1,22 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Developer KB Chat Workspace
+
+A responsive chat workspace built with Next.js, React, TypeScript, and MUI for AI-powered conversations with document knowledge base.
+
+## Features
+
+- **Responsive Layout**: Three-panel design with chat history, messages, and documents
+- **Real-time Streaming**: Assistant responses stream in real-time
+- **Document Selection**: Select multiple documents to include in chat context
+- **Chat Management**: Create and switch between different chat conversations
+- **Auto-scroll**: Messages automatically scroll to bottom
+- **Loading States**: Skeleton loaders and proper loading indicators
+- **Mobile Responsive**: Adapts to different screen sizes
+
+## Architecture
+
+### Components Structure
+```
+components/
+├── chat/
+│   ├── ChatWorkspace.tsx    # Main layout component
+│   └── ChatMessages.tsx     # Messages display and input
+├── documents/
+│   └── DocumentsSidebar.tsx # Document selection panel
+└── history/
+    └── ChatHistorySidebar.tsx # Chat list and creation
+```
+
+### Key Technologies
+- **Next.js 16** with App Router
+- **React 19** with TypeScript
+- **MUI (Material-UI)** for components
+- **Apollo Client** for GraphQL queries/mutations
+- **Supabase** for backend data
+- **AI SDK** for streaming responses
+
+### State Management
+- **Context API** for global chat state (active chat, selected documents)
+- **Apollo Client** for server state (queries, mutations)
 
 ## Getting Started
 
-First, run the development server:
-
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up environment variables (Supabase, etc.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Run the development server:
+```bash
+npm run dev
+```
+
+4. Open [http://localhost:3000](http://localhost:3000)
+
+## API Integration
+
+The app integrates with existing GraphQL APIs:
+- **Chats**: Create, list, and manage chat conversations
+- **Messages**: Send and retrieve messages with pagination
+- **Documents**: Fetch and select documents for context
+- **Streaming Chat**: Real-time AI responses via REST API
+
+## Development
+
+- `npm run lint` - Run ESLint
+- `npm run build` - Build for production
+- `npm run codegen` - Generate GraphQL types (if configured)
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

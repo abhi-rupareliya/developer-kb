@@ -36,6 +36,6 @@ export const chatTypeDefs = gql`
   type Mutation {
     createChat(input: CreateChatInput!): CreateChatResponse!
     updateChat(id: ID!, input: UpdateChatInput!): CreateChatResponse!
-    deleteChat(id: ID!): Boolean!
+    deleteChat(id: ID!): DeleteResponse!
   }
 `;

@@ -171,7 +171,7 @@ export const queryResolvers = {
         })
         .eq("chat_id", chatId)
         .order("created_at", {
-          ascending: false,
+          ascending: true,
         })
         .range(from, to);
 

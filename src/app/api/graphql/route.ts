@@ -30,4 +30,6 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(
   },
 );
 
-export { handler as POST };
+export async function POST(request: NextRequest) {
+  return handler(request);
+}

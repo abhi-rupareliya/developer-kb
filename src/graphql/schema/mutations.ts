@@ -22,7 +22,13 @@ export const mutationTypeDefs = gql`
     document: Document
   }
 
+  type DeleteResponse {
+    success: Boolean!
+    message: String!
+  }
+
   type Mutation {
     createDocument(input: CreateDocumentInput!): CreateDocumentResponse!
+    deleteDocument(id: ID!): DeleteResponse!
   }
 `;

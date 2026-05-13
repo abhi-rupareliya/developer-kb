@@ -1,4 +1,4 @@
 export type ParsedDocument = {
   text: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };

@@ -12,12 +12,12 @@ export const FILE_TYPE_MAP = {
   },
 
   javascript: {
-    mime: ["application/javascript", "text/javascript"],
+    mime: ["application/javascript", "text/javascript", "application/x-javascript", "text/plain"],
     extensions: [".js", ".jsx"],
   },
 
   typescript: {
-    mime: ["application/typescript", "text/typescript"],
+    mime: ["application/typescript", "text/typescript", "video/mp2t", "application/x-typescript", "text/plain"],
     extensions: [".ts", ".tsx"],
   },
 

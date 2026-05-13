@@ -211,5 +211,26 @@ export const mutationResolvers = {
         messageData: data,
       };
     },
+
+    deleteDocument: async (
+      _: unknown,
+      { id }: { id: string },
+      { supabase }: GraphQLContext,
+    ): Promise<{ success: boolean; message: string }> => {
+      const { error } = await supabase.from("documents").delete().eq("id", id);
+
+      if (error) {
+        console.log("error: ", error);
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Document deleted successfully",
+      };
+    },
   },
 };

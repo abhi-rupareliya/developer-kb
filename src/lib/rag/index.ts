@@ -29,17 +29,24 @@ export function chunkText(text: string, size = 800) {
 
 export const getRelevantChunks = async (
   embeddings: unknown,
+  documentIds: string[] = [],
   topK = 5,
   threshold = 0.6,
 ) => {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data, error } = await supabase.rpc("match_document_chunks", {
+  let query = supabase.rpc("match_document_chunks", {
     query_embedding: embeddings,
     match_count: topK,
     match_threshold: threshold,
   });
+
+  if (documentIds.length > 0) {
+    query = query.in('document_id', documentIds);
+  }
+
+  const { data, error } = await query;
 
   console.log("data: ", data);
   if (error) {
