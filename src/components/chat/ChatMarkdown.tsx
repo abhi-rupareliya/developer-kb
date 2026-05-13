@@ -26,8 +26,8 @@ export function ChatMarkdown({ content }: ChatMarkdownProps) {
           py: 1,
           borderLeft: '3px solid',
           borderColor: 'primary.main',
-          bgcolor: 'rgba(37, 99, 235, 0.04)',
-          borderRadius: 2,
+          bgcolor: 'background.surface',
+          borderRadius: 1,
         },
         '& table': {
           width: '100%',
@@ -61,7 +61,8 @@ export function ChatMarkdown({ content }: ChatMarkdownProps) {
                   px: 0.75,
                   py: 0.25,
                   borderRadius: 1,
-                  bgcolor: 'rgba(15, 23, 42, 0.06)',
+                  bgcolor: 'action.hover',
+                  color: 'text.primary',
                   fontFamily: 'ui-monospace, SFMono-Regular, monospace',
                   fontSize: '0.92em',
                 }}

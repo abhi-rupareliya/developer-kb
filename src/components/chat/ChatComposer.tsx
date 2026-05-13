@@ -29,28 +29,59 @@ export function ChatComposer({ disabled = false, isStreaming = false, selectedCo
   };
 
   return (
-    <Paper
+    <Box
       sx={{
-        borderRadius: 0,
-        borderLeft: 0,
-        borderRight: 0,
-        borderBottom: 0,
-        bgcolor: 'background.paper',
-        position: 'sticky',
-        bottom: 0,
-        zIndex: 2,
+        width: '100%',
+        p: { xs: 2, md: 3 },
+        pb: { xs: 3, md: 4 },
+        display: 'flex',
+        justifyContent: 'center',
+        bgcolor: 'transparent',
       }}
     >
-      <Box sx={{ p: 1.5 }}>
-        <Stack spacing={1}>
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: 820,
+          position: 'relative',
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'border.default',
+          borderRadius: 3,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+          overflow: 'hidden',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+          '&:focus-within': {
+            borderColor: 'primary.main',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+          }
+        }}
+      >
+        <Stack spacing={0}>
+          {selectedCount > 0 && (
+            <Box sx={{ px: 2, pt: 1.5 }}>
+              <Chip 
+                size="small" 
+                label={`${selectedCount} document${selectedCount === 1 ? '' : 's'} selected`}
+                sx={{ 
+                  borderRadius: 1, 
+                  bgcolor: 'action.hover',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  height: 24,
+                }} 
+              />
+            </Box>
+          )}
+
           <TextField
             fullWidth
             multiline
-            minRows={3}
-            maxRows={7}
+            minRows={1}
+            maxRows={12}
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="Write a message..."
+            placeholder="Type a message..."
             disabled={disabled || sending || isStreaming}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
@@ -58,35 +89,46 @@ export function ChatComposer({ disabled = false, isStreaming = false, selectedCo
                 void handleSend();
               }
             }}
-            slotProps={{
-              htmlInput: {
-                'aria-label': 'Chat message input',
-              },
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                border: 'none',
+                p: 2,
+                fontSize: '0.9375rem',
+                '& fieldset': { border: 'none' },
+              }
             }}
           />
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              {selectedCount > 0 ? (
-                <Chip size="small" label={`${selectedCount} document${selectedCount === 1 ? '' : 's'} selected`} />
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  No documents selected
-                </Typography>
-              )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1.5, pb: 1.5 }}>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              {/* Optional: Add file upload or other action icons here */}
             </Box>
 
             <Button
               variant="contained"
+              size="small"
               onClick={() => void handleSend()}
               disabled={!value.trim() || disabled || sending || isStreaming}
-              startIcon={sending || isStreaming ? <CircularProgress size={16} color="inherit" /> : <SendRoundedIcon />}
+              sx={{
+                minWidth: 40,
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                p: 0,
+                boxShadow: 'none',
+                '&:hover': { boxShadow: 'none' }
+              }}
             >
-              Send
+              {sending || isStreaming ? (
+                <CircularProgress size={18} color="inherit" thickness={5} />
+              ) : (
+                <SendRoundedIcon sx={{ fontSize: 20 }} />
+              )}
             </Button>
           </Box>
         </Stack>
       </Box>
-    </Paper>
+    </Box>
   );
 }
+

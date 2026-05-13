@@ -126,198 +126,157 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
   };
 
   return (
-    <AppPanel dense sx={{ height: "100%" }}>
-      <Stack sx={{ flex: 1, minHeight: 0 }}>
-        <Box sx={{ p: 1.5 }}>
-          <SectionHeader
-            title="Chats"
-            subtitle="Recent conversations"
-            action={
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddRoundedIcon />}
-                onClick={handleCreateChat}
-              >
-                New
-              </Button>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.paper' }}>
+      <Box sx={{ p: 1.5, pb: 1 }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          startIcon={<AddRoundedIcon fontSize="small" />}
+          onClick={handleCreateChat}
+          sx={{ 
+            justifyContent: 'flex-start',
+            borderColor: 'divider',
+            color: 'text.primary',
+            height: 40,
+            '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' }
+          }}
+        >
+          New Chat
+        </Button>
+      </Box>
+
+      <Box sx={{ px: 1.5, pb: 1 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              bgcolor: 'transparent',
+              fontSize: '0.8125rem',
+              height: 36,
             }
-          />
-        </Box>
+          }}
+        />
+      </Box>
 
-        <Box sx={{ px: 1.5, pb: 1.5 }}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search chats"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-        </Box>
-
-        <Divider />
-
-        <Box sx={{ flex: 1, overflow: "auto", p: 1.25 }}>
-          {loading ? (
-            <Stack spacing={1}>
-              <Skeleton variant="rounded" height={40} />
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} variant="rounded" height={52} />
-              ))}
-            </Stack>
-          ) : error ? (
-            <EmptyState
-              title="Could not load chats"
-              description={error.message}
-              action={{ label: "Retry", onClick: () => void refetch() }}
-            />
-          ) : groupedChats.length === 0 ? (
-            <EmptyState
-              title={search.trim() ? "No chats found" : "No chats yet"}
-              description={
-                search.trim()
-                  ? "Try a different search term."
-                  : "Start a new conversation to see it here."
-              }
-              icon={<HistoryRoundedIcon fontSize="small" />}
-              action={{ label: "New Chat", onClick: handleCreateChat }}
-            />
-          ) : (
-            <Stack spacing={1.5}>
-              {groupedChats.map((group) => (
-                <Box key={group.label}>
-                  <Typography
-                    variant="overline"
-                    color="text.secondary"
-                    sx={{ px: 1, mb: 0.5, display: "block" }}
-                  >
-                    {group.label}
-                  </Typography>
-                  <List disablePadding sx={{ display: "grid", gap: 0.75 }}>
-                    {group.chats.map((chat) => {
-                      const isActive = activeChatId === chat.id;
-                      return (
-                        <ListItem
-                          key={chat.id}
-                          disablePadding
-                          sx={{
-                            "& .MuiListItemSecondaryAction-root": {
-                              opacity: 0,
-                              transition: "opacity 0.2s",
-                              pointerEvents: "none",
-                            },
-                            "&:hover .MuiListItemSecondaryAction-root": {
-                              opacity: 1,
-                              pointerEvents: "auto",
-                            },
-                            ...(selectedChatId === chat.id &&
-                              Boolean(menuAnchor) && {
-                                "& .MuiListItemSecondaryAction-root": {
-                                  opacity: 1,
-                                  pointerEvents: "auto",
-                                },
-                              }),
-                            minWidth: 0,
-                            "& .MuiListItemButton-root": {
-                              pr: 1.5,
-                              transition: "padding-right 0.2s ease",
-                            },
-                            "&:hover .MuiListItemButton-root": {
-                              pr: 5,
-                            },
-                            ...(selectedChatId === chat.id &&
-                              Boolean(menuAnchor) && {
-                                "& .MuiListItemButton-root": {
-                                  pr: 5,
-                                },
-                              }),
-                          }}
-                          secondaryAction={
-                            <IconButton
-                              size="small"
-                              edge="end"
-                              onClick={(event) =>
-                                handleMenuOpen(event, chat.id)
-                              }
-                              aria-label={`Actions for ${chat.title || "Untitled chat"}`}
-                            >
-                              <MoreVertRoundedIcon fontSize="small" />
-                            </IconButton>
-                          }
-                        >
-                          <ListItemButton
-                            selected={isActive}
-                            disableRipple
-                            onClick={() => {
-                              router.push(`/chat/${chat.id}`);
-                            }}
-                            sx={{
-                              minWidth: 0,
-                              overflow: "hidden",
-                              textTransform: "capitalize",
+      <Box sx={{ flex: 1, overflow: 'auto', px: 1 }}>
+        {loading ? (
+          <Stack spacing={0.5} sx={{ mt: 1 }}>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} variant="text" height={32} sx={{ borderRadius: 1 }} />
+            ))}
+          </Stack>
+        ) : error ? (
+          <Typography variant="caption" color="error" sx={{ p: 2, display: 'block' }}>
+            {error.message}
+          </Typography>
+        ) : (
+          <Stack spacing={2} sx={{ py: 1 }}>
+            {groupedChats.map((group) => (
+              <Box key={group.label}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ px: 1, mb: 0.5, display: 'block', fontWeight: 600, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                >
+                  {group.label}
+                </Typography>
+                <List disablePadding>
+                  {group.chats.map((chat) => {
+                    const isActive = activeChatId === chat.id;
+                    return (
+                      <ListItem
+                        key={chat.id}
+                        disablePadding
+                        secondaryAction={
+                          <IconButton
+                            size="small"
+                            onClick={(event) => handleMenuOpen(event, chat.id)}
+                            className="chat-actions"
+                            sx={{ 
+                              opacity: 0, 
+                              transition: 'opacity 0.15s',
+                              p: 0.5
                             }}
                           >
-                            <ListItemText
-                              sx={{ minWidth: 0 }}
-                              primary={
-                                <Typography
-                                  variant="body2"
-                                  noWrap
-                                  sx={{
-                                    display: "block",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {chat.title || "Untitled Chat"}
-                                </Typography>
+                            <MoreVertRoundedIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        }
+                        sx={{
+                          '&:hover .chat-actions': { opacity: 1 },
+                          '& .MuiListItemSecondaryAction-root': { right: 8 }
+                        }}
+                      >
+                        <ListItemButton
+                          selected={isActive}
+                          onClick={() => router.push(`/chat/${chat.id}`)}
+                          sx={{
+                            py: 0.75,
+                            px: 1,
+                            minHeight: 36,
+                          }}
+                        >
+                          <ListItemText
+                            primary={chat.title || 'Untitled Chat'}
+                            primaryTypographyProps={{
+                              variant: 'body2',
+                              noWrap: true,
+                              sx: { 
+                                fontSize: '0.8125rem',
+                                color: isActive ? 'text.primary' : 'text.secondary',
+                                fontWeight: isActive ? 500 : 400
                               }
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </Box>
-              ))}
-            </Stack>
-          )}
-        </Box>
-      </Stack>
+                            }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Box>
 
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
+        slotProps={{
+          paper: {
+            sx: { minWidth: 160 }
+          }
+        }}
       >
-        <MenuItem onClick={handleDeleteRequested} disabled={variables.loading}>
+        <MenuItem onClick={handleDeleteRequested} sx={{ color: 'error.main', fontSize: '0.8125rem' }}>
           <DeleteOutlineRoundedIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete chat
+          Delete
         </MenuItem>
       </Menu>
 
       <ConfirmationDialog
         open={confirmDeleteOpen}
         title="Delete chat?"
-        description="This will permanently delete the conversation and cannot be undone."
-        confirmLabel={variables.loading ? "Deleting…" : "Delete"}
+        description="This will permanently delete the conversation."
+        confirmLabel="Delete"
         destructive
-        loading={variables.loading}
         onConfirm={() => void handleDeleteChat()}
-        onClose={() => {
-          if (!variables.loading) setConfirmDeleteOpen(false);
-        }}
+        onClose={() => setConfirmDeleteOpen(false)}
       />
-    </AppPanel>
+    </Box>
   );
 }
+

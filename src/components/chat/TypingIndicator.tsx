@@ -9,16 +9,16 @@ export function TypingIndicator() {
         <Box
           key={dot}
           sx={{
-            width: 7,
-            height: 7,
+            width: 5,
+            height: 5,
             borderRadius: '50%',
-            bgcolor: 'primary.main',
-            opacity: 0.4 + dot * 0.2,
-            animation: 'typingPulse 1.2s infinite ease-in-out',
-            animationDelay: `${dot * 0.16}s`,
+            bgcolor: 'text.secondary',
+            opacity: 0.4,
+            animation: 'typingPulse 1.4s infinite ease-in-out',
+            animationDelay: `${dot * 0.2}s`,
             '@keyframes typingPulse': {
-              '0%, 80%, 100%': { transform: 'translateY(0)', opacity: 0.35 },
-              '40%': { transform: 'translateY(-3px)', opacity: 1 },
+              '0%, 100%': { transform: 'scale(1)', opacity: 0.4 },
+              '50%': { transform: 'scale(1.2)', opacity: 0.8 },
             },
           }}
           />
