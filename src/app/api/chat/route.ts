@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
 
     const question = body.question?.trim()
     const documentIds = body.documentIds || []
+    const chatId = body.chatId || null
 
     if (!question) {
       return Response.json(
@@ -24,11 +25,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 1. Generate query embeddings
+    // 1. Authenticate user
+    const { cookies } = await import('next/headers')
+    const { createClient } = await import('@/lib/supabase/server')
+    const cookieStore = await cookies()
+    const supabase = createClient(cookieStore)
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 2. Generate query embeddings
     const embeddings = await embedText(question)
 
-    // 2. Retrieve relevant chunks
-    const relevantChunks = await getRelevantChunks(embeddings, documentIds)
+    // 3. Retrieve relevant chunks (scoped to user and chat)
+    const relevantChunks = await getRelevantChunks(embeddings, documentIds, 5, 0.6, user.id, chatId)
 
     // 3. Build structured context
     const context = buildContextFromChunks(relevantChunks)
@@ -37,12 +52,29 @@ export async function POST(req: NextRequest) {
     const systemPrompt = getSystemPrompt()
     const userPrompt = getPrompt(question, context)
 
+    const history = chatId ? await fetchChatHistory(chatId) : []
+
     // 5. Stream AI response
     const result = streamText({
       model: google(AI.CHAT_GENERATION_MODEL),
       system: systemPrompt,
-      prompt: userPrompt
+      messages: [...history, { role: 'user', content: userPrompt }]
     })
+
+    async function fetchChatHistory(id: string) {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('role, content')
+        .eq('chat_id', id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      return (data || []).reverse()
+    }
 
     // 6. Return streaming response
     return result.toTextStreamResponse()

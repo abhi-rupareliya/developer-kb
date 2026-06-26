@@ -42,8 +42,8 @@ export const GET_MESSAGES = gql`
 `
 
 export const GET_DOCUMENTS = gql`
-  query GetDocuments {
-    documents {
+  query GetDocuments($chatId: ID) {
+    documents(chatId: $chatId) {
       id
       title
       original_file_name

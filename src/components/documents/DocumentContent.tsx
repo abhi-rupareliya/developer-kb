@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertCircle, ChevronLeft, ChevronRight, Loader2, Info } from 'lucide-react'
+import { AlertCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Document as PDFDocument, Page as PDFPage, pdfjs } from 'react-pdf'
 import { getDocumentKind } from '@/utils/documents/documentKind'
-import { useDocumentContent } from './useDocumentContent'
+import { useDocumentContent } from '../../hooks/useDocumentContent'
 import { Document } from '@/types/graphql'
 import { ChatMarkdown } from '@/components/chat/ChatMarkdown'
 import { ChatCodeBlock } from '@/components/chat/ChatCodeBlock'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { useWindowWidth } from '@/hooks/useWindowWidth'
+import { getLanguage } from '@/utils/documents/getLanguage'
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
@@ -28,72 +28,51 @@ interface DocumentContentProps {
   document: Document
 }
 
-function getLanguage(filename?: string | null) {
-  const ext = filename?.split('.').pop()?.toLowerCase()
-  switch (ext) {
-    case 'js':
-      return 'javascript'
-    case 'ts':
-    case 'tsx':
-      return 'typescript'
-    case 'jsx':
-      return 'jsx'
-    case 'py':
-      return 'python'
-    case 'java':
-      return 'java'
-    case 'cpp':
-    case 'c':
-      return 'cpp'
-    case 'cs':
-      return 'csharp'
-    case 'go':
-      return 'go'
-    case 'rs':
-      return 'rust'
-    case 'sql':
-      return 'sql'
-    case 'html':
-      return 'html'
-    case 'css':
-      return 'css'
-    case 'json':
-      return 'json'
-    case 'yaml':
-    case 'yml':
-      return 'yaml'
-    case 'md':
-      return 'markdown'
-    case 'sh':
-      return 'bash'
-    default:
-      return 'text'
-  }
+// Loading PDF component
+function LoadingPDF() {
+  return (
+    <div className='flex flex-col items-center py-20 gap-3'>
+      <Loader2 className='w-6 h-6 animate-spin text-primary' />
+      <span className='text-sm text-muted-foreground'>Rendering PDF...</span>
+    </div>
+  )
+}
+
+// Error PDF component
+function ErrorPDF() {
+  return (
+    <Alert variant='destructive'>
+      <AlertCircle className='h-4 w-4' />
+      <AlertTitle>Error</AlertTitle>
+      <AlertDescription>Failed to load PDF</AlertDescription>
+    </Alert>
+  )
 }
 
 export function DocumentContent({ document }: DocumentContentProps) {
-  const kind = getDocumentKind(document.mime_type, document.original_file_name)
-  const {
-    content,
-    loading: contentLoading,
-    error: fetchError
-  } = useDocumentContent(kind === 'markdown' || kind === 'code' ? document.id : null)
-  const [numPages, setNumPages] = useState<number | null>(null)
+  // States
   const [pageNumber, setPageNumber] = useState(1)
+
+  const kind = getDocumentKind(document.mime_type, document.original_file_name)
+  const codeLanguage = getLanguage(document?.original_file_name)
+
+  // Hooks
+  const { content, loading, error } = useDocumentContent(kind === 'markdown' || kind === 'code' ? document.id : null)
+  const [numPages, setNumPages] = useState<number | null>(null)
 
   const windowWidth = useWindowWidth()
 
-  if (fetchError) {
+  if (error) {
     return (
       <Alert variant='destructive' className='m-4'>
         <AlertCircle className='h-4 w-4' />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{fetchError}</AlertDescription>
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     )
   }
 
-  if (contentLoading) {
+  if (loading) {
     return (
       <div className='min-h-[400px] flex flex-col items-center justify-center gap-3'>
         <Loader2 className='w-8 h-8 animate-spin text-primary' />
@@ -111,7 +90,11 @@ export function DocumentContent({ document }: DocumentContentProps) {
   }
 
   if (kind === 'code' && content) {
-    return <ChatCodeBlock language={getLanguage(document.original_file_name)}>{content}</ChatCodeBlock>
+    return (
+      <div className='max-w-4xl mx-auto px-4 md:px-8 py-6'>
+        <ChatCodeBlock language={codeLanguage}>{content}</ChatCodeBlock>
+      </div>
+    )
   }
 
   if (kind === 'pdf') {
@@ -150,19 +133,8 @@ export function DocumentContent({ document }: DocumentContentProps) {
           <PDFDocument
             file={`/api/documents/${document.id}`}
             onLoadSuccess={({ numPages: nextNumPages }) => setNumPages(nextNumPages)}
-            loading={
-              <div className='flex flex-col items-center py-20 gap-3'>
-                <Loader2 className='w-6 h-6 animate-spin text-primary' />
-                <span className='text-sm text-muted-foreground'>Rendering PDF...</span>
-              </div>
-            }
-            error={
-              <Alert variant='destructive'>
-                <AlertCircle className='h-4 w-4' />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>Failed to load PDF</AlertDescription>
-              </Alert>
-            }
+            loading={<LoadingPDF />}
+            error={<ErrorPDF />}
           >
             <PDFPage
               pageNumber={pageNumber}
@@ -176,17 +148,4 @@ export function DocumentContent({ document }: DocumentContentProps) {
       </div>
     )
   }
-
-  return (
-    <div className='p-8 max-w-2xl mx-auto'>
-      <Alert className='bg-secondary/30 border-none shadow-none rounded-2xl p-6'>
-        <Info className='h-5 w-5 text-primary' />
-        <AlertTitle className='text-lg font-semibold ml-2'>Preview Unavailable</AlertTitle>
-        <AlertDescription className='mt-2 text-muted-foreground leading-relaxed ml-2'>
-          This file type is stored and indexed for search, but inline previewing is currently unsupported. You can still
-          use it as context in your chats.
-        </AlertDescription>
-      </Alert>
-    </div>
-  )
 }

@@ -1,8 +1,9 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 export interface Document {
   id: string
   user_id: string
+  chat_id?: string | null
   title: string
   original_file_name: string
   storage_bucket: string
@@ -20,6 +21,7 @@ export interface Document {
 }
 
 export interface CreateDocumentInput {
+  chat_id?: string | null
   title: string
   original_file_name: string
   storage_bucket?: string
@@ -36,6 +38,7 @@ export interface CreateDocumentInput {
 
 export interface GraphQLContext {
   supabase: SupabaseClient
+  user: User | null
 }
 
 export interface DocumentChunk {
@@ -77,6 +80,7 @@ export type MessageRole = 'user' | 'assistant' | 'system'
 
 export interface Message {
   id: string
+
   chat_id: string
   role: MessageRole
   content: string

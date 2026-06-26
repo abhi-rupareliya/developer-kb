@@ -2,6 +2,7 @@ import gql from 'graphql-tag'
 
 export const mutationTypeDefs = gql`
   input CreateDocumentInput {
+    chat_id: ID
     title: String!
     original_file_name: String!
     storage_bucket: String

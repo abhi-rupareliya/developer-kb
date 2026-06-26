@@ -9,8 +9,10 @@ export function useDocumentsSidebar() {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const { selectedDocumentIds, toggleDocumentSelection } = useChat()
-  const { data, loading, error, refetch } = useQuery<{ documents: Document[] }>(GET_DOCUMENTS)
+  const { selectedDocumentIds, toggleDocumentSelection, activeChatId } = useChat()
+  const { data, loading, error, refetch } = useQuery<{ documents: Document[] }>(GET_DOCUMENTS, {
+    variables: { chatId: activeChatId }
+  })
   const [deleteDocument] = useMutation(DELETE_DOCUMENT)
 
   const processingDocumentIds = useMemo(() => {
@@ -80,6 +82,7 @@ export function useDocumentsSidebar() {
     handleMenuClose,
     handleDeleteDocument,
     handleUploadSuccess,
-    setSelectedDocumentId
+    setSelectedDocumentId,
+    activeChatId
   }
 }

@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@apollo/client/react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, RefreshCw, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { AlertCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { useChat } from '@/contexts/chat-context'
 import { GET_CHAT, GET_MESSAGES } from '@/graphql/queries'
-import { CREATE_CHAT, CREATE_MESSAGE, DELETE_CHAT } from '@/graphql/mutations'
+import { CREATE_CHAT, CREATE_MESSAGE } from '@/graphql/mutations'
 import { Chat, Message } from '@/types/graphql'
 import { useChatStreaming } from '@/hooks/useChatStreaming'
 import { processSourceReferences } from '@/utils/processSourceReferences'
@@ -15,28 +15,31 @@ import { toErrorMessage } from '@/utils/error-utils'
 
 import { ChatMessageList } from './ChatMessageList'
 import { ChatComposer } from './ChatComposer'
+import { NewChatSetup } from './NewChatSetup'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type ChatMessagesProps = {
   activeChatId: string | null
-  isDraftChat: boolean
   historyOpen?: boolean
   onToggleHistory?: () => void
 }
 
-export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleHistory }: ChatMessagesProps) {
+export function ChatMessages({ activeChatId, historyOpen, onToggleHistory }: ChatMessagesProps) {
+  // States
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [streamedMessage, setStreamedMessage] = useState<Message | null>(null)
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([])
+  const [creatingChat, setCreatingChat] = useState(false)
+
+  // Contexts
   const { selectedDocumentIds } = useChat()
   const router = useRouter()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [streamedMessage, setStreamedMessage] = useState<Message | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Apollo Client
   const [createChat] = useMutation<{ createChat: { chat: Chat | null } }>(CREATE_CHAT)
   const [createMessage] = useMutation(CREATE_MESSAGE)
-  const [deleteChat] = useMutation(DELETE_CHAT)
-  const { isStreaming, streamedContent, streamResponse } = useChatStreaming()
 
   const {
     data: chatData,
@@ -52,7 +55,8 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
     data: messagesData,
     loading: messagesLoading,
     error: messagesError,
-    refetch: refetchMessages
+    refetch: refetchMessages,
+    fetchMore
   } = useQuery<{
     messages: {
       messages: Message[]
@@ -63,17 +67,17 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
       hasMore: boolean
     }
   }>(GET_MESSAGES, {
-    variables: { chatId: activeChatId, page: 1, limit: 50 },
+    variables: { chatId: activeChatId, page: 1, limit: 5 },
     skip: !activeChatId,
     fetchPolicy: 'cache-and-network'
   })
 
-  const chatTitle = useMemo(() => {
-    if (!activeChatId) return 'New Chat'
-    return chatData?.chat?.title || 'Untitled Chat'
-  }, [activeChatId, chatData?.chat?.title])
+  // Custom Hooks
+  const { isStreaming, streamedContent, streamResponse } = useChatStreaming()
 
-  const messages = messagesData?.messages?.messages ?? []
+  // Computed Values
+  const messages = useMemo(() => messagesData?.messages?.messages ?? [], [messagesData?.messages?.messages])
+  const displayedMessages = useMemo(() => [...messages, ...optimisticMessages], [messages, optimisticMessages])
   const streamPreview = streamedMessage
     ? {
         ...streamedMessage,
@@ -81,50 +85,98 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
       }
     : null
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const handleLoadMore = useCallback(async () => {
+    if (!messagesData?.messages?.hasMore || messagesLoading) return
+    
+    await fetchMore({
+      variables: {
+        page: messagesData.messages.page + 1
+      },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return prev
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages.length, streamedContent])
+        return {
+          messages: {
+            ...fetchMoreResult.messages,
+            // Prepend older messages fetched to the current ones
+            messages: [
+              ...fetchMoreResult.messages.messages,
+              ...prev.messages.messages
+            ]
+          }
+        }
+      }
+    })
+  }, [fetchMore, messagesData, messagesLoading])
+
+  const chatTitle = useMemo(() => {
+    if (!activeChatId) return 'New Chat'
+    return chatData?.chat?.title || 'Untitled Chat'
+  }, [activeChatId, chatData?.chat?.title])
 
   const loadErrorMessage = chatError?.message ?? messagesError?.message ?? null
   const displayErrorMessage = errorMessage ?? loadErrorMessage
 
-  const handleSendMessage = async (message: string) => {
-    if (!message.trim()) return
-
+  const handleCreateChat = async (title: string) => {
+    setCreatingChat(true)
     setErrorMessage(null)
-    let chatIdToUse = activeChatId
-    let createdChatId: string | null = null
-
     try {
-      if (!chatIdToUse) {
-        const title = message.trim().slice(0, 60) || 'New Chat'
-        const result = await createChat({
-          variables: { input: { title } }
-        })
-
-        createdChatId = result.data?.createChat?.chat?.id ?? null
-        chatIdToUse = createdChatId
-
-        if (!chatIdToUse) {
-          throw new Error('Failed to create chat')
-        }
-      }
-
-      await createMessage({
-        variables: {
-          input: {
-            chat_id: chatIdToUse,
-            role: 'user',
-            content: message,
-            metadata: { selectedDocuments: selectedDocumentIds }
-          }
-        }
+      const result = await createChat({
+        variables: { input: { title } }
       })
 
+      const chatId = result.data?.createChat?.chat?.id
+      if (chatId) {
+        router.push(`/chat/${chatId}`)
+      } else {
+        throw new Error('Failed to create chat')
+      }
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error))
+    } finally {
+      setCreatingChat(false)
+    }
+  }
+
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return
+    if (!activeChatId) {
+      setErrorMessage('Please create a chat first.')
+      return
+    }
+
+    setErrorMessage(null)
+    const chatIdToUse = activeChatId
+
+    const optimisticUserId = `local-${Date.now()}`
+    const optimisticUserMessage: Message = {
+      id: optimisticUserId,
+      chat_id: chatIdToUse,
+      role: 'user',
+      content: message,
+      metadata: { selectedDocuments: selectedDocumentIds } as Record<string, unknown>,
+      created_at: new Date().toISOString()
+    }
+
+    // Show user's message immediately (optimistic UI)
+    setOptimisticMessages(prev => [...prev, optimisticUserMessage])
+
+    // Persist user message in background; remove optimistic on error
+    createMessage({
+      variables: {
+        input: {
+          chat_id: chatIdToUse,
+          role: 'user',
+          content: message,
+          metadata: { selectedDocuments: selectedDocumentIds }
+        }
+      }
+    }).catch(err => {
+      setOptimisticMessages(prev => prev.filter(m => m.id !== optimisticUserId))
+      setErrorMessage(toErrorMessage(err))
+    })
+
+    try {
       const tempMessage: Message = {
         id: 'streaming',
         chat_id: chatIdToUse,
@@ -135,8 +187,10 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
       }
 
       setStreamedMessage(tempMessage)
-      const assistantContent = await streamResponse(message, selectedDocumentIds)
 
+      const assistantContent = await streamResponse(message, selectedDocumentIds, chatIdToUse)
+
+      // Persist assistant final message
       await createMessage({
         variables: {
           input: {
@@ -147,32 +201,69 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
         }
       })
 
+      // Wait for refetch to complete so new messages are in the Apollo cache
+      await refetchMessages()
+      void refetchChat()
+
+      // Clear optimistic & streamed messages AFTER cache is updated 
+      // preventing the message list from shrinking and losing scroll position
       setStreamedMessage(null)
-
-      if (activeChatId) {
-        await refetchMessages()
-        await refetchChat()
-      }
-
-      if (!activeChatId && chatIdToUse) {
-        router.replace(`/chat/${chatIdToUse}`)
-      }
+      setOptimisticMessages([])
     } catch (sendError) {
       setStreamedMessage(null)
       const messageText = toErrorMessage(sendError)
       setErrorMessage(messageText)
-
-      if (createdChatId) {
-        try {
-          await deleteChat({ variables: { id: createdChatId } })
-        } catch (deleteError) {
-          console.error('Failed to rollback temporary chat:', deleteError)
-        }
-      }
     }
   }
 
   const selectedCount = selectedDocumentIds.length
+
+  // render chat messages
+  const renderChatMessages = () => {
+    if (chatLoading && activeChatId && !chatData?.chat) {
+      return (
+        <div className='py-6 space-y-6 px-4 md:px-6 w-full max-w-3xl mx-auto flex flex-col justify-end min-h-[50vh]'>
+           {/* Same matching skeleton style for chat load */}
+           <div className='flex gap-4 max-w-3xl'>
+             <div className='size-8 rounded-full shrink-0 flex items-center justify-center bg-muted/60'>
+               <Skeleton className='size-5 rounded-full bg-transparent' />
+             </div>
+             <div className='flex-1 space-y-3 pt-1'>
+               <Skeleton className='h-4 w-24' />
+               <Skeleton className='h-4 w-full' />
+               <Skeleton className='h-4 w-[60%]' />
+             </div>
+           </div>
+        </div>
+      )
+    } else {
+      return (
+        <ChatMessageList
+          messages={displayedMessages}
+          isLoading={messagesLoading && displayedMessages.length === 0}
+          streamedMessage={streamPreview}
+          streamedContent={streamedContent}
+          onLoadMore={handleLoadMore}
+          hasMore={!!messagesData?.messages?.hasMore}
+          isFetchingMore={messagesLoading && displayedMessages.length > 0}
+        />
+      )
+    }
+  }
+
+  // render error
+  const renderError = () => {
+    if (displayErrorMessage) {
+      return (
+        <div className='mx-4 mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-start gap-3'>
+          <AlertCircle className='size-5 shrink-0 mt-0.5' />
+          <div className='flex-1'>
+            <p className='text-sm font-medium'>{displayErrorMessage}</p>
+          </div>
+        </div>
+      )
+    }
+  }
 
   return (
     <div className='flex flex-col h-full w-full overflow-hidden'>
@@ -195,67 +286,37 @@ export function ChatMessages({ activeChatId, isDraftChat, historyOpen, onToggleH
         </div>
       </header>
 
-      {/* Scrollable message area */}
-      <ScrollArea className='flex-1 overflow-hidden'>
-        <div className='flex flex-col'>
-          {displayErrorMessage && (
-            <div className='mx-4 mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-start gap-3'>
-              <AlertCircle className='size-5 shrink-0 mt-0.5' />
-              <div className='flex-1'>
-                <p className='text-sm font-medium'>{displayErrorMessage}</p>
-                {activeChatId && (
-                  <Button
-                    variant='link'
-                    size='sm'
-                    className='text-destructive p-0 h-auto mt-1'
-                    onClick={() => refetchMessages()}
-                  >
-                    <RefreshCw className='size-3 mr-1' />
-                    Retry
-                  </Button>
-                )}
-              </div>
+      {/* Message area (Virtuoso handles its own scroll logic if used, else standard flex scroll) */}
+      <div className='flex-1 min-h-0 overflow-hidden flex flex-col'>
+        {renderError()}
+        {!activeChatId ? (
+          <ScrollArea className='flex-1 w-full'>
+            <div className='max-w-3xl mx-auto w-full py-12'>
+              <NewChatSetup onCreateChat={handleCreateChat} isLoading={creatingChat} />
             </div>
-          )}
-
-          {chatLoading && activeChatId ? (
-            <div className='space-y-6 py-8'>
-              {[1, 2, 3].map(i => (
-                <div key={i} className='max-w-3xl mx-auto flex gap-6 px-6'>
-                  <Skeleton className='size-8 rounded-full shrink-0' />
-                  <div className='flex-1 space-y-2'>
-                    <Skeleton className='h-4 w-24' />
-                    <Skeleton className='h-20 w-full' />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <ChatMessageList
-              messages={messages}
-              isLoading={messagesLoading}
-              streamedMessage={streamPreview}
-              streamedContent={streamedContent}
-            />
-          )}
-          <div ref={messagesEndRef} className='h-1' />
-        </div>
-      </ScrollArea>
+          </ScrollArea>
+        ) : (
+          renderChatMessages()
+        )}
+      </div>
 
       {/* Composer — pinned at bottom, outside scroll area */}
-      <div className='shrink-0 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3'>
-        <div className='max-w-3xl mx-auto flex flex-col gap-2'>
-          <ChatComposer
-            disabled={false}
-            isStreaming={isStreaming}
-            selectedCount={selectedCount}
-            onSend={handleSendMessage}
-          />
-          <p className='text-[10px] text-center text-muted-foreground'>
-            AI can make mistakes. Consider checking important information.
-          </p>
+      {activeChatId && (
+        <div className='shrink-0 w-full border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 py-3'>
+          <div className='max-w-3xl mx-auto flex flex-col gap-2'>
+            <ChatComposer
+              disabled={false}
+              isStreaming={isStreaming}
+              selectedCount={selectedCount}
+              isAllSelected={selectedDocumentIds.includes('ALL')}
+              onSend={handleSendMessage}
+            />
+            <p className='text-[10px] text-center text-muted-foreground'>
+              AI can make mistakes. Consider checking important information.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

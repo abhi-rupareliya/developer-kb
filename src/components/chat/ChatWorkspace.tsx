@@ -10,10 +10,9 @@ import { useIsMobile } from '@/hooks/use-mobile'
 
 type ChatWorkspaceProps = {
   activeChatId: string | null
-  isDraftChat: boolean
 }
 
-export function ChatWorkspace({ activeChatId, isDraftChat }: ChatWorkspaceProps) {
+export function ChatWorkspace({ activeChatId }: ChatWorkspaceProps) {
   const isMobile = useIsMobile()
   const [historyOpen, setHistoryOpen] = useState(true)
 
@@ -31,27 +30,26 @@ export function ChatWorkspace({ activeChatId, isDraftChat }: ChatWorkspaceProps)
                 <History className='size-4' />
                 <span>History</span>
               </TabsTrigger>
-              <TabsTrigger value='documents' className='flex items-center gap-2'>
-                <FileText className='size-4' />
-                <span>Docs</span>
-              </TabsTrigger>
+              {activeChatId && (
+                <TabsTrigger value='documents' className='flex items-center gap-2'>
+                  <FileText className='size-4' />
+                  <span>Docs</span>
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
           <div className='flex-1 overflow-hidden'>
             <TabsContent value='chat' className='h-full m-0 data-[state=inactive]:hidden'>
-              <ChatMessages
-                activeChatId={activeChatId}
-                isDraftChat={isDraftChat}
-                historyOpen={false}
-                onToggleHistory={() => {}}
-              />
+              <ChatMessages activeChatId={activeChatId} historyOpen={false} />
             </TabsContent>
             <TabsContent value='history' className='h-full m-0 data-[state=inactive]:hidden'>
               <ChatHistorySidebar activeChatId={activeChatId} />
             </TabsContent>
-            <TabsContent value='documents' className='h-full m-0 data-[state=inactive]:hidden'>
-              <DocumentsSidebar />
-            </TabsContent>
+            {activeChatId && (
+              <TabsContent value='documents' className='h-full m-0 data-[state=inactive]:hidden'>
+                <DocumentsSidebar />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
@@ -71,16 +69,17 @@ export function ChatWorkspace({ activeChatId, isDraftChat }: ChatWorkspaceProps)
       <div className='flex-1 min-w-0 h-full overflow-hidden'>
         <ChatMessages
           activeChatId={activeChatId}
-          isDraftChat={isDraftChat}
           historyOpen={historyOpen}
           onToggleHistory={() => setHistoryOpen(prev => !prev)}
         />
       </div>
 
       {/* Documents sidebar */}
-      <div className='w-[300px] shrink-0 border-l hidden xl:flex xl:flex-col overflow-hidden'>
-        <DocumentsSidebar />
-      </div>
+      {activeChatId && (
+        <div className='w-[300px] shrink-0 border-l hidden xl:flex xl:flex-col overflow-hidden'>
+          <DocumentsSidebar />
+        </div>
+      )}
     </div>
   )
 }

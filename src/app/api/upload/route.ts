@@ -15,12 +15,35 @@ export async function POST(req: NextRequest) {
     const cookieStore = await cookies()
 
     const files = formData.getAll('files') as File[]
+    const chatId = formData.get('chat_id') as string | null
 
     if (!files.length) {
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 })
     }
 
     const supabase = createClient(cookieStore)
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Verify chat ownership if chatId is provided
+    if (chatId) {
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('id', chatId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (chatError || !chat) {
+        return NextResponse.json({ error: 'Chat not found or access denied' }, { status: 403 })
+      }
+    }
 
     const results = []
 
@@ -39,7 +62,8 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from('documents')
         .insert({
-          user_id: '03612923-6932-44f0-ad47-5097c604426b', // Replace with actual user ID from auth context
+          user_id: user.id,
+          chat_id: chatId || null,
           title: file.name,
           original_file_name: file.name,
           storage_bucket: uploaded.bucket,

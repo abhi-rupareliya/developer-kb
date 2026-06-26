@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 
 interface SourceLinkProps {
   href: string
@@ -14,15 +14,17 @@ interface SourceLinkProps {
 export function SourceLink({ href, children }: SourceLinkProps) {
   const router = useRouter()
   const isSourceRef = href?.toLowerCase().startsWith('documents/')
+  const documentId = href.split('/').pop()
+  const navigateToSource = () => router.push(`/documents/${documentId}`)
 
   if (isSourceRef) {
-    const documentId = href.split('/').pop()
     return (
       <Badge
         variant='secondary'
-        className='mx-0.5 px-2 py-0 cursor-pointer font-medium hover:bg-secondary/80 transition-colors'
-        onClick={() => router.push(`/documents/${documentId}`)}
+        className='mx-0.5 gap-1.5 rounded-full px-2 py-0 cursor-pointer font-medium hover:bg-secondary/80 transition-colors inline-flex items-center'
+        onClick={navigateToSource}
       >
+        <FileText className='size-3.5 shrink-0' />
         {children}
       </Badge>
     )

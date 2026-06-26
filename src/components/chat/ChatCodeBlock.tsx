@@ -12,6 +12,15 @@ type ChatCodeBlockProps = {
   children: string
 }
 
+// Header copy icon with tooltip
+export const renderCodeHeaderIcon = (copied: boolean) => {
+  if (copied) {
+    return <Check className='h-3.5 w-3.5 text-green-500' />
+  } else {
+    return <Copy className='h-3.5 w-3.5' />
+  }
+}
+
 export function ChatCodeBlock({ language, children }: ChatCodeBlockProps) {
   const [copied, setCopied] = useState(false)
 
@@ -33,7 +42,7 @@ export function ChatCodeBlock({ language, children }: ChatCodeBlockProps) {
               className='h-7 w-7 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
               onClick={handleCopy}
             >
-              {copied ? <Check className='h-3.5 w-3.5 text-green-500' /> : <Copy className='h-3.5 w-3.5' />}
+              {renderCodeHeaderIcon(copied)}
             </Button>
           </TooltipTrigger>
           <TooltipContent side='left' className='bg-zinc-800 border-zinc-700 text-zinc-100'>

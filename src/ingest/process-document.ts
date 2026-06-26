@@ -1,7 +1,6 @@
 import { chunkText, embedText } from '@/lib/rag'
 import { inngest } from '@/lib/inngest'
-
-import { createClient } from '@/lib/supabase/client'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { parseFileByType } from '@/lib/upload/parser'
 import { PROCESSING_STATUS } from '@/constants/Uploads'
 
@@ -11,14 +10,14 @@ export const processDocument = inngest.createFunction(
     triggers: { event: 'document.uploaded' },
     retries: 0,
     onFailure: async ({ event }) => {
-      const supabase = createClient()
+      const supabase = createAdminClient()
       const { documentId } = event.data.event.data
 
       await supabase.from('documents').update({ processing_status: PROCESSING_STATUS.FAILED }).eq('id', documentId)
     }
   },
   async ({ event, step }) => {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     const { documentId } = event.data
 
     // mark processing

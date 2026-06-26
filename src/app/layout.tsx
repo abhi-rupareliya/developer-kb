@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { ApolloProviderWrapper } from '@/lib/apollo/provider'
 import { ChatProvider } from '@/contexts/chat-context'
+import { AuthProvider } from '@/contexts/auth-context'
 import { Geist } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -27,12 +28,14 @@ export default function RootLayout({
       <body>
         <ThemeProvider attribute='class' defaultTheme='system' enableSystem disableTransitionOnChange>
           <TooltipProvider>
-            <ApolloProviderWrapper>
-              <ChatProvider>
-                {children}
-                {modal}
-              </ChatProvider>
-            </ApolloProviderWrapper>
+            <AuthProvider>
+              <ApolloProviderWrapper>
+                <ChatProvider>
+                  {children}
+                  {modal}
+                </ChatProvider>
+              </ApolloProviderWrapper>
+            </AuthProvider>
           </TooltipProvider>
           <Toaster richColors position='top-center' />
         </ThemeProvider>

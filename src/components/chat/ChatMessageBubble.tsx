@@ -11,13 +11,12 @@ type ChatMessageBubbleProps = {
 }
 
 export function ChatMessageBubble({ message, streamedContent }: ChatMessageBubbleProps) {
-  const isAssistant = message.role === 'assistant'
   const isUser = message.role === 'user'
   const isStreaming = message.id === 'streaming'
 
   const content = isStreaming ? (streamedContent ?? '') : message.content
 
-  /* ── User message: right-aligned bubble ─────────────────────── */
+  // User message: right-aligned bubble
   if (isUser) {
     return (
       <div className='w-full flex justify-end px-4 md:px-6 py-3'>
@@ -34,7 +33,7 @@ export function ChatMessageBubble({ message, streamedContent }: ChatMessageBubbl
     )
   }
 
-  /* ── Assistant / system message: full-width, no bubble ──────── */
+  // Assistant / system message: full-width, no bubble
   return (
     <div className='w-full py-3 px-4 md:px-6'>
       <div className='max-w-3xl'>

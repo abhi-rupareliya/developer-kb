@@ -7,8 +7,19 @@ interface DocumentArgs {
 
 export const queryResolvers = {
   Query: {
-    documents: async (_: unknown, __: unknown, { supabase }: GraphQLContext): Promise<Document[]> => {
-      const { data, error } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    documents: async (
+      _: unknown,
+      { chatId }: { chatId?: string },
+      { supabase, user }: GraphQLContext
+    ): Promise<Document[]> => {
+      if (!user) return []
+      let query = supabase.from('documents').select('*').eq('user_id', user.id)
+
+      if (chatId) {
+        query = query.eq('chat_id', chatId)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) {
         throw new Error(error.message)
@@ -17,8 +28,13 @@ export const queryResolvers = {
       return data
     },
 
-    document: async (_: unknown, { id }: DocumentArgs, { supabase }: GraphQLContext): Promise<Document | null> => {
-      const { data, error } = await supabase.from('documents').select('*').eq('id', id).single()
+    document: async (
+      _: unknown,
+      { id }: DocumentArgs,
+      { supabase, user }: GraphQLContext
+    ): Promise<Document | null> => {
+      if (!user) return null
+      const { data, error } = await supabase.from('documents').select('*').eq('id', id).eq('user_id', user.id).single()
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -31,8 +47,14 @@ export const queryResolvers = {
       return data
     },
 
-    documentStatus: async (_: unknown, { id }: DocumentArgs, { supabase }: GraphQLContext): Promise<string> => {
-      const { data, error } = await supabase.from('documents').select('processing_status').eq('id', id).single()
+    documentStatus: async (_: unknown, { id }: DocumentArgs, { supabase, user }: GraphQLContext): Promise<string> => {
+      if (!user) return 'unauthorized'
+      const { data, error } = await supabase
+        .from('documents')
+        .select('processing_status')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single()
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -47,8 +69,9 @@ export const queryResolvers = {
     queryDocuments: async (
       _: unknown,
       { query }: { query: string },
-      { supabase }: GraphQLContext
+      { supabase, user }: GraphQLContext
     ): Promise<DocumentChunk[]> => {
+      if (!user) return []
       const threshold = 0.6
       const topK = 10
 
@@ -63,7 +86,8 @@ export const queryResolvers = {
       const { data, error } = await supabase.rpc('match_document_chunks', {
         query_embedding: embedding,
         match_threshold: threshold,
-        match_count: topK
+        match_count: topK,
+        p_user_id: user.id // Assuming RPC takes user_id
       })
 
       if (error) {
@@ -73,8 +97,13 @@ export const queryResolvers = {
       return data || []
     },
 
-    chats: async (_: unknown, __: unknown, { supabase }: GraphQLContext): Promise<Chat[]> => {
-      const { data, error } = await supabase.from('chats').select('*').order('created_at', { ascending: false })
+    chats: async (_: unknown, __: unknown, { supabase, user }: GraphQLContext): Promise<Chat[]> => {
+      if (!user) return []
+      const { data, error } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
       if (error) {
         throw new Error(error.message)
@@ -83,8 +112,9 @@ export const queryResolvers = {
       return data
     },
 
-    chat: async (_: unknown, { id }: { id: string }, { supabase }: GraphQLContext): Promise<Chat | null> => {
-      const { data, error } = await supabase.from('chats').select('*').eq('id', id).single()
+    chat: async (_: unknown, { id }: { id: string }, { supabase, user }: GraphQLContext): Promise<Chat | null> => {
+      if (!user) return null
+      const { data, error } = await supabase.from('chats').select('*').eq('id', id).eq('user_id', user.id).single()
 
       if (error) {
         if (error.code === 'PGRST116') {
@@ -107,7 +137,7 @@ export const queryResolvers = {
         page?: number
         limit?: number
       },
-      { supabase }: GraphQLContext
+      { supabase, user }: GraphQLContext
     ): Promise<{
       messages: Message[]
       total: number
@@ -116,8 +146,21 @@ export const queryResolvers = {
       totalPages: number
       hasMore: boolean
     }> => {
-      const from = (page - 1) * limit
+      if (!user) throw new Error('Unauthorized')
 
+      // Verify chat ownership
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('id', chatId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (chatError || !chat) {
+        throw new Error('Chat not found or access denied')
+      }
+
+      const from = (page - 1) * limit
       const to = from + limit - 1
 
       const { data, error, count } = await supabase
@@ -127,7 +170,7 @@ export const queryResolvers = {
         })
         .eq('chat_id', chatId)
         .order('created_at', {
-          ascending: true
+          ascending: false
         })
         .range(from, to)
 
@@ -139,8 +182,11 @@ export const queryResolvers = {
 
       const totalPages = Math.ceil(total / limit)
 
+      // Reverse so the chunk itself is chronological (oldest to newest)
+      const chunkMessages = data ? data.reverse() : []
+
       return {
-        messages: data || [],
+        messages: chunkMessages,
         total,
         page,
         limit,

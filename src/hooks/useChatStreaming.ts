@@ -4,7 +4,7 @@ export function useChatStreaming() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamedContent, setStreamedContent] = useState('')
 
-  const streamResponse = useCallback(async (question: string, documentIds: string[]) => {
+  const streamResponse = useCallback(async (question: string, documentIds: string[], chatId?: string) => {
     setIsStreaming(true)
     setStreamedContent('')
 
@@ -16,7 +16,8 @@ export function useChatStreaming() {
         },
         body: JSON.stringify({
           question,
-          documentIds
+          documentIds,
+          chatId
         })
       })
 

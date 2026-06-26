@@ -12,6 +12,6 @@ export function processSourceReferences(content: string): string {
   return content.replace(sourcePattern, (match, id) => {
     // Convert to markdown link format
     // The href will be "source:{id}" which SourceLink component will detect
-    return `[📄 Source Document](documents/${id})`
+    return `[📄 Source Document](source:${id})`
   })
 }

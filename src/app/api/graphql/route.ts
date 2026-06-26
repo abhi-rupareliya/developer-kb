@@ -21,8 +21,13 @@ const handler = startServerAndCreateNextHandler<NextRequest, GraphQLContext>(ser
   context: async () => {
     const cookieStore = await cookies()
     const supabaseClient = createClient(cookieStore)
+    const {
+      data: { user }
+    } = await supabaseClient.auth.getUser()
+
     return {
-      supabase: supabaseClient
+      supabase: supabaseClient,
+      user
     }
   }
 })

@@ -27,23 +27,58 @@ export function chunkText(text: string, size = 800) {
   return chunks
 }
 
-export const getRelevantChunks = async (embeddings: unknown, documentIds: string[] = [], topK = 5, threshold = 0.6) => {
+export const getRelevantChunks = async (
+  embeddings: unknown,
+  documentIds: string[] = [],
+  topK = 5,
+  threshold = 0.6,
+  userId?: string,
+  chatId?: string
+) => {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
 
   let query = supabase.rpc('match_document_chunks', {
     query_embedding: embeddings,
     match_count: topK,
-    match_threshold: threshold
+    match_threshold: threshold,
+    p_user_id: userId, // Pass userId to the RPC for security
+    p_chat_id: chatId || null,
+    p_doc_ids: documentIds.includes('ALL') ? null : documentIds
   })
 
-  if (documentIds.length > 0) {
-    query = query.in('document_id', documentIds)
+  let finalDocumentIds = documentIds
+
+  if (documentIds.includes('ALL')) {
+    if (chatId) {
+      // Fetch all documents for this chat
+      let docsQuery = supabase.from('documents').select('id').eq('chat_id', chatId)
+
+      if (userId) {
+        docsQuery = docsQuery.eq('user_id', userId)
+      }
+
+      const { data: chatDocs } = await docsQuery
+
+      if (chatDocs && chatDocs.length > 0) {
+        finalDocumentIds = chatDocs.map(doc => doc.id)
+      } else {
+        finalDocumentIds = ['00000000-0000-0000-0000-000000000000']
+      }
+    } else {
+      // If no chatId (e.g. new chat), match nothing
+      finalDocumentIds = ['00000000-0000-0000-0000-000000000000']
+    }
+  }
+
+  if (finalDocumentIds.length === 0) {
+    query = query.in('document_id', ['00000000-0000-0000-0000-000000000000'])
+  } else {
+    query = query.in('document_id', finalDocumentIds)
   }
 
   const { data, error } = await query
 
-  console.log('data: ', data)
   if (error) {
     throw new Error(error.message)
   }
@@ -91,7 +126,8 @@ export const getSystemPrompt = () => {
 
     Example:
     JWT validation happens in middleware
-    [@source:123-456-789]
+    [@source:123-456-789], [@source:987-654-321],
+    [@source:111-222-333]
 
     Only cite sources that were actually used.  
 

@@ -5,9 +5,8 @@ import { useQuery } from '@apollo/client/react'
 import { GET_DOCUMENTS } from '@/graphql/queries'
 import { Document } from '@/types/graphql'
 import { DocumentContent } from '@/components/documents/DocumentContent'
-import { X, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 
 export function DocumentModalView({ documentId }: { documentId: string }) {
   const router = useRouter()
@@ -33,7 +32,7 @@ export function DocumentModalView({ documentId }: { documentId: string }) {
           </div>
         </DialogHeader>
 
-        <div className='flex-1 overflow-auto  w-full'>
+        <div className='flex-1 min-w-0 overflow-auto w-full'>
           {queryError ? (
             <div className='p-8 text-center'>
               <p className='text-destructive font-medium'>Failed to load document</p>

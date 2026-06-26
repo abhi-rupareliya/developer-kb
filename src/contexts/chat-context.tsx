@@ -1,10 +1,10 @@
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface ChatContextType {
   activeChatId: string | null
-  setActiveChatId: (id: string | null) => void
   selectedDocumentIds: string[]
   setSelectedDocumentIds: (ids: string[]) => void
   toggleDocumentSelection: (id: string) => void
@@ -13,18 +13,30 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([])
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>(['ALL'])
+
+  const activeChatId = usePathname().split('/chat/')[1]
 
   const toggleDocumentSelection = (id: string) => {
-    setSelectedDocumentIds(prev => (prev.includes(id) ? prev.filter(docId => docId !== id) : [...prev, id]))
+    setSelectedDocumentIds(prev => {
+      if (id === 'ALL') {
+        return prev.includes('ALL') ? [] : ['ALL']
+      }
+
+      const newSelection = prev.filter(docId => docId !== 'ALL')
+
+      if (newSelection.includes(id)) {
+        return newSelection.filter(docId => docId !== id)
+      } else {
+        return [...newSelection, id]
+      }
+    })
   }
 
   return (
     <ChatContext.Provider
       value={{
         activeChatId,
-        setActiveChatId,
         selectedDocumentIds,
         setSelectedDocumentIds,
         toggleDocumentSelection

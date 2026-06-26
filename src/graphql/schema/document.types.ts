@@ -6,6 +6,7 @@ export const documentTypeDefs = gql`
   type Document {
     id: ID!
     user_id: ID!
+    chat_id: ID
     title: String!
     original_file_name: String!
     storage_bucket: String!
@@ -23,7 +24,7 @@ export const documentTypeDefs = gql`
   }
 
   type Query {
-    documents: [Document!]!
+    documents(chatId: ID): [Document!]!
     document(id: ID!): Document
     documentStatus(id: ID!): String!
   }
