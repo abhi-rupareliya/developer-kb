@@ -92,7 +92,7 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
         update(cache) {
           cache.modify({
             fields: {
-              chats(existingChats: { __ref: string }[] = [], { readField }) {
+              chats(existingChats: readonly { __ref: string }[] = [], { readField }) {
                 return existingChats.filter(ref => readField('id', ref) !== chatIdToDelete)
               }
             }
