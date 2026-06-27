@@ -1,9 +1,5 @@
 import { embedText } from '@/lib/rag'
-import { GraphQLContext, Document, DocumentChunk, Chat, Message } from '@/types/graphql'
-
-interface DocumentArgs {
-  id: string
-}
+import { GraphQLContext, Document, DocumentChunk, Chat, Message, PaginatedMessages } from '@/types/graphql'
 
 export const queryResolvers = {
   Query: {
@@ -30,7 +26,7 @@ export const queryResolvers = {
 
     document: async (
       _: unknown,
-      { id }: DocumentArgs,
+      { id }: { id: string },
       { supabase, user }: GraphQLContext
     ): Promise<Document | null> => {
       if (!user) return null
@@ -47,7 +43,7 @@ export const queryResolvers = {
       return data
     },
 
-    documentStatus: async (_: unknown, { id }: DocumentArgs, { supabase, user }: GraphQLContext): Promise<string> => {
+    documentStatus: async (_: unknown, { id }: { id: string }, { supabase, user }: GraphQLContext): Promise<string> => {
       if (!user) return 'unauthorized'
       const { data, error } = await supabase
         .from('documents')
@@ -79,15 +75,13 @@ export const queryResolvers = {
         throw new Error('query must be a string')
       }
 
-      // 1. Embed query
       const embedding = await embedText(query)
 
-      // 2. Query  vector DB
       const { data, error } = await supabase.rpc('match_document_chunks', {
         query_embedding: embedding,
         match_threshold: threshold,
         match_count: topK,
-        p_user_id: user.id // Assuming RPC takes user_id
+        p_user_id: user.id
       })
 
       if (error) {
@@ -128,24 +122,9 @@ export const queryResolvers = {
 
     messages: async (
       _: unknown,
-      {
-        chatId,
-        page = 1,
-        limit = 20
-      }: {
-        chatId: string
-        page?: number
-        limit?: number
-      },
+      { chatId, page = 1, limit = 20 }: { chatId: string; page?: number; limit?: number },
       { supabase, user }: GraphQLContext
-    ): Promise<{
-      messages: Message[]
-      total: number
-      page: number
-      limit: number
-      totalPages: number
-      hasMore: boolean
-    }> => {
+    ): Promise<PaginatedMessages> => {
       if (!user) throw new Error('Unauthorized')
 
       // Verify chat ownership
@@ -182,7 +161,6 @@ export const queryResolvers = {
 
       const totalPages = Math.ceil(total / limit)
 
-      // Reverse so the chunk itself is chronological (oldest to newest)
       const chunkMessages = data ? data.reverse() : []
 
       return {

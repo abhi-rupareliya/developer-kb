@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { AlertCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 import { useChat } from '@/contexts/chat-context'
-import { GET_CHAT, GET_MESSAGES } from '@/graphql/queries'
+import { GET_CHAT, GET_CHATS, GET_MESSAGES } from '@/graphql/queries'
 import { CREATE_CHAT, CREATE_MESSAGE } from '@/graphql/mutations'
 import { Chat, Message } from '@/types/graphql'
 import { useChatStreaming } from '@/hooks/useChatStreaming'
@@ -122,7 +122,8 @@ export function ChatMessages({ activeChatId, historyOpen, onToggleHistory }: Cha
     setErrorMessage(null)
     try {
       const result = await createChat({
-        variables: { input: { title } }
+        variables: { input: { title } },
+        refetchQueries: [{ query: GET_CHATS }]
       })
 
       const chatId = result.data?.createChat?.chat?.id

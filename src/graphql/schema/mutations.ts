@@ -1,4 +1,4 @@
-import gql from 'graphql-tag'
+import { gql } from 'graphql-tag'
 
 export const mutationTypeDefs = gql`
   input CreateDocumentInput {
@@ -31,5 +31,10 @@ export const mutationTypeDefs = gql`
   type Mutation {
     createDocument(input: CreateDocumentInput!): CreateDocumentResponse!
     deleteDocument(id: ID!): DeleteResponse!
+    createChat(input: CreateChatInput!): CreateChatResponse!
+    updateChat(id: ID!, input: UpdateChatInput!): CreateChatResponse!
+    deleteChat(id: ID!): DeleteResponse!
+    createMessage(input: CreateMessageInput!): Message!
+    deleteMessage(id: ID!): DeleteResponse!
   }
 `

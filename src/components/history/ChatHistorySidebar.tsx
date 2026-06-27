@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { useQuery, useMutation } from '@apollo/client/react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MoreVertical, Trash2, History, MessageSquare, Sun, Moon } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Trash2, History, MessageSquare, Sun, Moon } from 'lucide-react'
 
 import { GET_CHATS } from '@/graphql/queries'
 import { DELETE_CHAT } from '@/graphql/mutations'
@@ -82,16 +82,30 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
 
   const handleDeleteChat = async () => {
     if (!selectedChatId) return
+    const chatIdToDelete = selectedChatId
+    // Close dialog and clear selection immediately for snappy UX
+    setConfirmDeleteOpen(false)
+    setSelectedChatId(null)
     try {
-      await deleteChat({ variables: { id: selectedChatId } })
-      if (activeChatId === selectedChatId) {
+      await deleteChat({
+        variables: { id: chatIdToDelete },
+        update(cache) {
+          cache.modify({
+            fields: {
+              chats(existingChats: { __ref: string }[] = [], { readField }) {
+                return existingChats.filter(ref => readField('id', ref) !== chatIdToDelete)
+              }
+            }
+          })
+        }
+      })
+      if (activeChatId === chatIdToDelete) {
         router.push('/chat/new')
       }
-      await refetch()
-      setConfirmDeleteOpen(false)
-      setSelectedChatId(null)
     } catch (mutationError) {
       console.error('Failed to delete chat:', mutationError)
+      // Re-fetch to restore correct state on error
+      void refetch()
     }
   }
 
@@ -153,7 +167,7 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
                     className='opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0 p-0.5 h-7 w-7 rounded hover:bg-accent-foreground/10'
                     onClick={e => e.stopPropagation()}
                   >
-                    <MoreVertical className='size-4' />
+                    <MoreHorizontal className='size-4' />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align='end' className='w-48'>
@@ -220,7 +234,6 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
                 <div className='flex-1 min-w-0 text-left'>
                   <p className='text-sm font-medium truncate'>{authLoading ? 'Loading...' : displayName}</p>
                   <p className='text-xs text-muted-foreground truncate'>{displayEmail}</p>
-                  <p className='text-[10px] text-muted-foreground/80 truncate'>{displayUserId}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -231,7 +244,7 @@ export function ChatHistorySidebar({ activeChatId }: ChatHistorySidebarProps) {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className='text-destructive focus:bg-destructive/10 focus:text-destructive'
+                className='text-red-500 dark:text-red-400 focus:bg-red-500/10 focus:text-red-500 dark:focus:text-red-400'
                 onClick={() => signOut()}
               >
                 <LogOut className='size-4 mr-2' />

@@ -19,16 +19,16 @@ export function ChatWorkspace({ activeChatId }: ChatWorkspaceProps) {
   if (isMobile) {
     return (
       <div className='flex h-screen w-full overflow-hidden bg-background'>
-        <Tabs defaultValue='chat' className='flex flex-col h-full w-full'>
+        <Tabs defaultValue='history' className='flex flex-col h-full w-full'>
           <div className='px-4 py-2 border-b shrink-0'>
             <TabsList className='grid w-full grid-cols-3'>
-              <TabsTrigger value='chat' className='flex items-center gap-2'>
-                <MessageSquare className='size-4' />
-                <span>Chat</span>
-              </TabsTrigger>
               <TabsTrigger value='history' className='flex items-center gap-2'>
                 <History className='size-4' />
                 <span>History</span>
+              </TabsTrigger>
+              <TabsTrigger value='chat' className='flex items-center gap-2'>
+                <MessageSquare className='size-4' />
+                <span>Chat</span>
               </TabsTrigger>
               {activeChatId && (
                 <TabsTrigger value='documents' className='flex items-center gap-2'>

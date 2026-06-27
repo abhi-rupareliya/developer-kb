@@ -26,6 +26,7 @@ if (typeof DOMMatrix === 'undefined') {
 
 interface DocumentContentProps {
   document: Document
+  compact?: boolean
 }
 
 // Loading PDF component
@@ -49,7 +50,7 @@ function ErrorPDF() {
   )
 }
 
-export function DocumentContent({ document }: DocumentContentProps) {
+export function DocumentContent({ document, compact }: DocumentContentProps) {
   // States
   const [pageNumber, setPageNumber] = useState(1)
 
@@ -83,7 +84,7 @@ export function DocumentContent({ document }: DocumentContentProps) {
 
   if (kind === 'markdown' && content) {
     return (
-      <div className='max-w-4xl mx-auto px-4 md:px-8 py-6'>
+      <div className={compact ? 'p-3' : 'max-w-4xl mx-auto px-4 md:px-8 py-6'}>
         <ChatMarkdown content={content} />
       </div>
     )
@@ -91,7 +92,7 @@ export function DocumentContent({ document }: DocumentContentProps) {
 
   if (kind === 'code' && content) {
     return (
-      <div className='max-w-4xl mx-auto px-4 md:px-8 py-6'>
+      <div className={compact ? 'p-3' : 'max-w-4xl mx-auto px-4 md:px-8 py-6'}>
         <ChatCodeBlock language={codeLanguage}>{content}</ChatCodeBlock>
       </div>
     )

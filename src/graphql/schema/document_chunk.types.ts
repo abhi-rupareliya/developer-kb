@@ -1,15 +1,9 @@
-import gql from 'graphql-tag'
+import { gql } from 'graphql-tag'
 
 export const documentChunkTypeDefs = gql`
-  scalar JSON
-
-  type Query {
-    queryDocuments(query: String!): [DocumentChunk!]!
-  }
-
   type DocumentChunk {
-    document_id: String!
-    content: ID!
+    document_id: ID!
+    content: String!
     similarity: Float!
   }
 `

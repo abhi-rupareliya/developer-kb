@@ -1,8 +1,6 @@
-import gql from 'graphql-tag'
+import { gql } from 'graphql-tag'
 
 export const documentTypeDefs = gql`
-  scalar JSON
-
   type Document {
     id: ID!
     user_id: ID!
@@ -21,11 +19,5 @@ export const documentTypeDefs = gql`
     metadata: JSON!
     created_at: String!
     updated_at: String!
-  }
-
-  type Query {
-    documents(chatId: ID): [Document!]!
-    document(id: ID!): Document
-    documentStatus(id: ID!): String!
   }
 `

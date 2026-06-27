@@ -1,26 +1,26 @@
 import { PROCESSING_STATUS } from '@/constants/Uploads'
-import { CreateDocumentInput, GraphQLContext, Document, CreateChatInput, CreateChatResponse } from '@/types/graphql'
-
-interface CreateDocumentArgs {
-  input: CreateDocumentInput
-}
-
-interface CreateDocumentResponse {
-  success: boolean
-  message: string
-  document: Document | null
-}
+import {
+  GraphQLContext,
+  Document,
+  CreateDocumentInput,
+  CreateDocumentResponse,
+  Chat,
+  CreateChatInput,
+  UpdateChatInput,
+  CreateChatResponse,
+  Message,
+  CreateMessageInput,
+  DeleteResponse
+} from '@/types/graphql'
 
 export const mutationResolvers = {
   Mutation: {
     createDocument: async (
       _: unknown,
-      { input }: CreateDocumentArgs,
+      { input }: { input: CreateDocumentInput },
       { supabase, user }: GraphQLContext
     ): Promise<CreateDocumentResponse> => {
-      if (!user) {
-        return { success: false, message: 'Unauthorized', document: null }
-      }
+      if (!user) return { success: false, message: 'Unauthorized', document: null }
 
       if (input.chat_id) {
         const { data: chat, error: chatError } = await supabase
@@ -55,19 +55,10 @@ export const mutationResolvers = {
       const { data, error } = await supabase.from('documents').insert(payload).select().single()
 
       if (error) {
-        console.log('error: ', error)
-        return {
-          success: false,
-          message: error.message,
-          document: null
-        }
+        return { success: false, message: error.message, document: null }
       }
 
-      return {
-        success: true,
-        message: 'Document created successfully',
-        document: data
-      }
+      return { success: true, message: 'Document created successfully', document: data as Document }
     },
 
     createChat: async (
@@ -75,52 +66,29 @@ export const mutationResolvers = {
       { input }: { input: CreateChatInput },
       { supabase, user }: GraphQLContext
     ): Promise<CreateChatResponse> => {
-      if (!user) {
-        return { success: false, message: 'Unauthorized', chat: null }
-      }
+      if (!user) return { success: false, message: 'Unauthorized', chat: null }
 
-      const payload = {
-        user_id: user.id,
-        title: input.title ?? 'New Chat',
-        metadata: input.metadata ?? {}
-      }
+      const { data, error } = await supabase
+        .from('chats')
+        .insert({ user_id: user.id, title: input.title ?? 'New Chat', metadata: input.metadata ?? {} })
+        .select()
+        .single()
 
-      const { data, error } = await supabase.from('chats').insert(payload).select().single()
+      if (error) return { success: false, message: error.message, chat: null }
 
-      if (error) {
-        return {
-          success: false,
-          message: error.message,
-          chat: null
-        }
-      }
-
-      return {
-        success: true,
-        message: 'Chat created successfully',
-        chat: data
-      }
+      return { success: true, message: 'Chat created successfully', chat: data as Chat }
     },
 
     updateChat: async (
       _: unknown,
-      { id, input }: { id: string; input: CreateChatInput },
+      { id, input }: { id: string; input: UpdateChatInput },
       { supabase, user }: GraphQLContext
     ): Promise<CreateChatResponse> => {
-      if (!user) {
-        return { success: false, message: 'Unauthorized', chat: null }
-      }
+      if (!user) return { success: false, message: 'Unauthorized', chat: null }
 
-      const payload = {
-        title: input.title,
-        metadata: input.metadata
-      }
-
-      for (const key in payload) {
-        if (payload[key as keyof typeof payload] === undefined) {
-          delete payload[key as keyof typeof payload]
-        }
-      }
+      const payload: Partial<UpdateChatInput> = {}
+      if (input.title !== undefined) payload.title = input.title
+      if (input.metadata !== undefined) payload.metadata = input.metadata
 
       const { data, error } = await supabase
         .from('chats')
@@ -130,65 +98,32 @@ export const mutationResolvers = {
         .select()
         .single()
 
-      if (error) {
-        return {
-          success: false,
-          message: error.message,
-          chat: null
-        }
-      }
+      if (error) return { success: false, message: error.message, chat: null }
 
-      return {
-        success: true,
-        message: 'Chat updated successfully',
-        chat: data
-      }
+      return { success: true, message: 'Chat updated successfully', chat: data as Chat }
     },
 
     deleteChat: async (
       _: unknown,
       { id }: { id: string },
       { supabase, user }: GraphQLContext
-    ): Promise<{ success: boolean; message: string }> => {
-      if (!user) {
-        return { success: false, message: 'Unauthorized' }
-      }
+    ): Promise<DeleteResponse> => {
+      if (!user) return { success: false, message: 'Unauthorized' }
 
       const { error } = await supabase.from('chats').delete().eq('id', id).eq('user_id', user.id)
 
-      if (error) {
-        console.log('error: ', error)
-        return {
-          success: false,
-          message: error.message
-        }
-      }
+      if (error) return { success: false, message: error.message }
 
-      return {
-        success: true,
-        message: 'Chat deleted successfully'
-      }
+      return { success: true, message: 'Chat deleted successfully' }
     },
 
     createMessage: async (
       _: unknown,
-      {
-        input
-      }: {
-        input: {
-          chat_id: string
-          role: 'user' | 'assistant' | 'system'
-          content: string
-          metadata?: Record<string, unknown>
-        }
-      },
+      { input }: { input: CreateMessageInput },
       { supabase, user }: GraphQLContext
-    ) => {
-      if (!user) {
-        throw new Error('Unauthorized')
-      }
+    ): Promise<Message> => {
+      if (!user) throw new Error('Unauthorized')
 
-      // Verify chat ownership
       const { data: chat, error: chatError } = await supabase
         .from('chats')
         .select('id')
@@ -196,9 +131,7 @@ export const mutationResolvers = {
         .eq('user_id', user.id)
         .single()
 
-      if (chatError || !chat) {
-        throw new Error('Chat not found or access denied')
-      }
+      if (chatError || !chat) throw new Error('Chat not found or access denied')
 
       const { data, error } = await supabase
         .from('messages')
@@ -211,75 +144,54 @@ export const mutationResolvers = {
         .select('*')
         .single()
 
-      if (error) {
-        throw new Error(error.message)
-      }
+      if (error) throw new Error(error.message)
 
-      return data
+      return data as Message
     },
 
-    deleteMessage: async (_: unknown, { id }: { id: string }, { supabase, user }: GraphQLContext) => {
+    deleteMessage: async (
+      _: unknown,
+      { id }: { id: string },
+      { supabase, user }: GraphQLContext
+    ): Promise<DeleteResponse> => {
       if (!user) throw new Error('Unauthorized')
 
-      // Get the message to check its chat_id
-      const { data: message, error: fetchError } = await supabase
+      const { data: messageRow, error: fetchError } = await supabase
         .from('messages')
         .select('chat_id')
         .eq('id', id)
         .single()
 
-      if (fetchError || !message) {
-        throw new Error('Message not found')
-      }
+      if (fetchError || !messageRow) throw new Error('Message not found')
 
-      // Verify chat ownership
       const { data: chat, error: chatError } = await supabase
         .from('chats')
         .select('id')
-        .eq('id', message.chat_id)
+        .eq('id', messageRow.chat_id)
         .eq('user_id', user.id)
         .single()
 
-      if (chatError || !chat) {
-        throw new Error('Unauthorized access to this message')
-      }
+      if (chatError || !chat) throw new Error('Unauthorized access to this message')
 
-      const { data, error } = await supabase.from('messages').delete().eq('id', id).select('*').single()
+      const { error } = await supabase.from('messages').delete().eq('id', id)
 
-      if (error) {
-        throw new Error(error.message)
-      }
+      if (error) throw new Error(error.message)
 
-      return {
-        success: true,
-        message: 'Message deleted successfully',
-        messageData: data
-      }
+      return { success: true, message: 'Message deleted successfully' }
     },
 
     deleteDocument: async (
       _: unknown,
       { id }: { id: string },
       { supabase, user }: GraphQLContext
-    ): Promise<{ success: boolean; message: string }> => {
-      if (!user) {
-        return { success: false, message: 'Unauthorized' }
-      }
+    ): Promise<DeleteResponse> => {
+      if (!user) return { success: false, message: 'Unauthorized' }
 
       const { error } = await supabase.from('documents').delete().eq('id', id).eq('user_id', user.id)
 
-      if (error) {
-        console.log('error: ', error)
-        return {
-          success: false,
-          message: error.message
-        }
-      }
+      if (error) return { success: false, message: error.message }
 
-      return {
-        success: true,
-        message: 'Document deleted successfully'
-      }
+      return { success: true, message: 'Document deleted successfully' }
     }
   }
 }

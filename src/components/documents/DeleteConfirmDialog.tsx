@@ -10,15 +10,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
+import { Loader2 } from 'lucide-react'
 
 interface DeleteConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => Promise<void>
   onCancel?: () => void
+  isDeleting?: boolean
 }
 
-export function DeleteConfirmDialog({ open, onOpenChange, onConfirm, onCancel }: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ open, onOpenChange, onConfirm, onCancel, isDeleting }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -29,12 +31,25 @@ export function DeleteConfirmDialog({ open, onOpenChange, onConfirm, onCancel }:
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onCancel} disabled={isDeleting}>
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-            onClick={onConfirm}
+            disabled={isDeleting}
+            onClick={e => {
+              e.preventDefault()
+              onConfirm()
+            }}
           >
-            Delete
+            {isDeleting ? (
+              <>
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState, useRef } from 'react'
-import { CloudUpload, Trash2, AlertCircle, FileText, CheckCircle2, Loader2 } from 'lucide-react'
+import { CloudUpload, Trash2, AlertCircle, FileText, CheckCircle2, Loader2, ClipboardPaste } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { SUPPORTED_EXTENSIONS, MAX_FILE_SIZE } from '@/constants/Uploads'
 import { Document } from '@/types/graphql'
@@ -36,36 +37,37 @@ interface FileWithStatus {
 }
 
 export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadModalProps) {
-  // States
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'upload' | 'paste'>('upload')
+
+  // Upload tab states
   const [files, setFiles] = useState<FileWithStatus[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  // Refs
+  // Paste tab states
+  const [pasteText, setPasteText] = useState('')
+  const [pasteName, setPasteName] = useState('')
+  const [isPasting, setIsPasting] = useState(false)
+  const [pasteError, setPasteError] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Computed values
-  const validFiles = useMemo(() => files.filter(file => file.status === 'pending'), [files])
+  const validFiles = useMemo(() => files.filter(f => f.status === 'pending'), [files])
 
-  // Handle file selection
+  // ── File upload handlers ──────────────────────────────────────────────────
+
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return
-
     const newFiles: FileWithStatus[] = Array.from(selectedFiles).map(file => {
       const error = validateFile(file)
-      return {
-        file,
-        status: error ? 'error' : 'pending',
-        error
-      }
+      return { file, status: error ? 'error' : 'pending', error }
     })
-
     setSubmitError(null)
     setFiles(current => [...current, ...newFiles])
   }, [])
 
-  // Handle file drop
   const handleDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
@@ -75,53 +77,35 @@ export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadMo
     [handleFileSelect]
   )
 
-  // Handle file upload
   const handleUpload = async () => {
     if (validFiles.length === 0) return
-
     setIsUploading(true)
     setSubmitError(null)
     setFiles(current =>
-      current.map(file => (file.status === 'pending' ? { ...file, status: 'uploading', progress: 0 } : file))
+      current.map(f => (f.status === 'pending' ? { ...f, status: 'uploading', progress: 0 } : f))
     )
 
     try {
       const formData = new FormData()
-      validFiles.forEach(file => {
-        formData.append('files', file.file)
-      })
+      validFiles.forEach(f => formData.append('files', f.file))
+      if (chatId) formData.append('chat_id', chatId)
 
-      console.log('chatId', chatId)
-
-      if (chatId) {
-        formData.append('chat_id', chatId)
-      }
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      })
-
+      const response = await fetch('/api/upload', { method: 'POST', body: formData })
       const result = await response.json()
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Upload failed')
-      }
+      if (!response.ok || !result.success) throw new Error(result.error || 'Upload failed')
 
       setFiles(current =>
-        current.map(file => (file.status === 'uploading' ? { ...file, status: 'success', progress: 100 } : file))
+        current.map(f => (f.status === 'uploading' ? { ...f, status: 'success', progress: 100 } : f))
       )
-
       onUploadSuccess(result.documents)
-      setTimeout(() => {
-        setFiles([])
-      }, 400)
+      setTimeout(() => setFiles([]), 400)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed'
       setSubmitError(message)
       setFiles(current =>
-        current.map(file =>
-          file.status === 'uploading' ? { ...file, status: 'error', error: message, progress: 0 } : file
+        current.map(f =>
+          f.status === 'uploading' ? { ...f, status: 'error', error: message, progress: 0 } : f
         )
       )
     } finally {
@@ -129,57 +113,73 @@ export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadMo
     }
   }
 
-  // Handle close modal
-  const handleClose = () => {
+  const removeFile = (index: number) => {
     if (isUploading) return
+    setFiles(current => current.filter((_, i) => i !== index))
+  }
+
+  // ── Paste content handler ─────────────────────────────────────────────────
+
+  const handlePasteSubmit = async () => {
+    const text = pasteText.trim()
+    if (!text) return
+
+    setIsPasting(true)
+    setPasteError(null)
+
+    try {
+      const now = new Date()
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const fileName = pasteName.trim() ? `${pasteName.trim()}.txt` : `Pasted content - ${timeStr}.txt`
+
+      const file = new File([text], fileName, { type: 'text/plain' })
+      const formData = new FormData()
+      formData.append('files', file)
+      if (chatId) formData.append('chat_id', chatId)
+
+      const response = await fetch('/api/upload', { method: 'POST', body: formData })
+      const result = await response.json()
+
+      if (!response.ok || !result.success) throw new Error(result.error || 'Upload failed')
+
+      setPasteText('')
+      setPasteName('')
+      onUploadSuccess(result.documents)
+    } catch (error) {
+      setPasteError(error instanceof Error ? error.message : 'Upload failed')
+    } finally {
+      setIsPasting(false)
+    }
+  }
+
+  // ── Shared ────────────────────────────────────────────────────────────────
+
+  const handleClose = () => {
+    if (isUploading || isPasting) return
     setFiles([])
     setSubmitError(null)
+    setPasteText('')
+    setPasteName('')
+    setPasteError(null)
     onClose()
   }
 
-  // Remove file
-  const removeFile = (index: number) => {
-    if (isUploading) return
-    setFiles(current => current.filter((_, currentIndex) => currentIndex !== index))
-  }
-
-  // Handle drag over
-  const handleDragOver = (event: React.DragEvent) => {
-    event.preventDefault()
-    setDragOver(true)
-  }
-
-  // Handle drag leave
-  const handleDragLeave = (event: React.DragEvent) => {
-    event.preventDefault()
-    setDragOver(false)
-  }
-
-  // Handle dropdzone click
-  const handleDropZoneClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  // get max file size message
   const getMaxFileSizeMessage = useMemo(() => {
     const maxSize = Math.round(MAX_FILE_SIZE / (1024 * 1024))
-
     return `Max ${maxSize}MB per file`
   }, [])
 
-  // Render error alert
-  const renderError = () => {
-    if (!submitError) return null
+  const renderError = (msg: string | null) => {
+    if (!msg) return null
     return (
       <Alert variant='destructive' className='rounded-xl'>
         <AlertCircle className='h-4 w-4' />
         <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{submitError}</AlertDescription>
+        <AlertDescription>{msg}</AlertDescription>
       </Alert>
     )
   }
 
-  // Render selected files list
   const renderFileList = () => {
     if (files.length === 0) return null
     return (
@@ -187,12 +187,8 @@ export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadMo
         <div className='flex items-center justify-between'>
           <h4 className='text-sm font-semibold'>Selected Files</h4>
           <div className='flex gap-2'>
-            <Badge variant='outline' className='rounded-full'>
-              {files.length} Total
-            </Badge>
-            <Badge variant='secondary' className='rounded-full'>
-              {validFiles.length} Ready
-            </Badge>
+            <Badge variant='outline' className='rounded-full'>{files.length} Total</Badge>
+            <Badge variant='secondary' className='rounded-full'>{validFiles.length} Ready</Badge>
           </div>
         </div>
 
@@ -211,10 +207,7 @@ export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadMo
                         variant='ghost'
                         size='icon'
                         className='h-7 w-7 rounded-full text-muted-foreground hover:text-destructive'
-                        onClick={e => {
-                          e.stopPropagation()
-                          removeFile(index)
-                        }}
+                        onClick={e => { e.stopPropagation(); removeFile(index) }}
                         disabled={isUploading}
                       >
                         <Trash2 className='w-3.5 h-3.5' />
@@ -251,71 +244,131 @@ export function UploadModal({ open, onClose, onUploadSuccess, chatId }: UploadMo
               <CloudUpload className='w-5 h-5 text-primary' />
             </div>
             <div>
-              <DialogTitle className='text-xl'>Upload documents</DialogTitle>
-              <DialogDescription>Add documents to your knowledge base.</DialogDescription>
+              <DialogTitle className='text-xl'>Add document</DialogTitle>
+              <DialogDescription>Upload a file or paste text into your knowledge base.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Scrollable body — grows between header and footer */}
-        <div className='flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4'>
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={handleDropZoneClick}
-            className={cn(
-              'group relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-10 px-6 cursor-pointer transition-all duration-200',
-              dragOver
-                ? 'border-primary bg-primary/5 scale-[0.99]'
-                : 'border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/5'
-            )}
-          >
-            <CloudUpload
-              className={cn(
-                'w-12 h-12 mb-4 transition-colors',
-                dragOver ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'
-              )}
-            />
-            <div className='text-center'>
-              <p className='text-sm font-medium'>Click to upload or drag and drop</p>
-              <p className='text-xs text-muted-foreground mt-1'>Supported: {SUPPORTED_EXTENSIONS.join(', ')}</p>
-              <p className='text-xs text-muted-foreground'>{getMaxFileSizeMessage}</p>
+        <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'upload' | 'paste')} className='flex flex-col flex-1 min-h-0'>
+          <TabsList className='mx-6 mt-4 w-fit bg-muted/60 border border-border/40'>
+            <TabsTrigger
+              value='upload'
+              className={cn(activeTab === 'upload' && 'bg-background text-foreground shadow-sm dark:bg-accent dark:text-accent-foreground')}
+            >
+              <CloudUpload className='w-3.5 h-3.5 mr-1.5' />
+              Upload file
+            </TabsTrigger>
+            <TabsTrigger
+              value='paste'
+              className={cn(activeTab === 'paste' && 'bg-background text-foreground shadow-sm dark:bg-accent dark:text-accent-foreground')}
+            >
+              <ClipboardPaste className='w-3.5 h-3.5 mr-1.5' />
+              Paste content
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Upload tab ─────────────────────────────────────────── */}
+          <TabsContent value='upload' className='flex flex-col flex-1 min-h-0 mt-0'>
+            <div className='flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4'>
+              <div
+                onDrop={handleDrop}
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={e => { e.preventDefault(); setDragOver(false) }}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  'group relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl py-10 px-6 cursor-pointer transition-all duration-200',
+                  dragOver
+                    ? 'border-primary bg-primary/5 scale-[0.99]'
+                    : 'border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/5'
+                )}
+              >
+                <CloudUpload
+                  className={cn(
+                    'w-12 h-12 mb-4 transition-colors',
+                    dragOver ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'
+                  )}
+                />
+                <div className='text-center'>
+                  <p className='text-sm font-medium'>Click to upload or drag and drop</p>
+                  <p className='text-xs text-muted-foreground mt-1'>Supported: {SUPPORTED_EXTENSIONS.join(', ')}</p>
+                  <p className='text-xs text-muted-foreground'>{getMaxFileSizeMessage}</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type='file'
+                  multiple
+                  accept={SUPPORTED_EXTENSIONS.join(',')}
+                  className='hidden'
+                  onChange={event => handleFileSelect(event.target.files)}
+                />
+              </div>
+
+              {renderError(submitError)}
+              {renderFileList()}
             </div>
-            <input
-              ref={fileInputRef}
-              type='file'
-              multiple
-              accept={SUPPORTED_EXTENSIONS.join(',')}
-              className='hidden'
-              onChange={event => handleFileSelect(event.target.files)}
-            />
-          </div>
 
-          {renderError()}
-          {renderFileList()}
-        </div>
+            <Separator />
+            <DialogFooter className='border-t bg-muted/20 pb-8 pr-8'>
+              <Button variant='ghost' onClick={handleClose} disabled={isUploading}>Cancel</Button>
+              <Button onClick={handleUpload} disabled={validFiles.length === 0 || isUploading}>
+                {isUploading ? (
+                  <><Loader2 className='w-4 h-4 animate-spin' />Uploading...</>
+                ) : (
+                  <><CloudUpload className='w-4 h-4' />Upload files</>
+                )}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
 
-        <Separator />
+          {/* ── Paste tab ──────────────────────────────────────────── */}
+          <TabsContent value='paste' className='flex flex-col flex-1 min-h-0 mt-0'>
+            <div className='flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-3'>
+              <div className='space-y-1.5'>
+                <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                  Document name (optional)
+                </label>
+                <input
+                  type='text'
+                  value={pasteName}
+                  onChange={e => setPasteName(e.target.value)}
+                  placeholder='e.g. API reference notes'
+                  className='w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring/60'
+                />
+              </div>
 
-        <DialogFooter className='border-t bg-muted/20 pb-8 pr-8'>
-          <Button variant='ghost' onClick={handleClose} disabled={isUploading}>
-            Cancel
-          </Button>
-          <Button onClick={handleUpload} disabled={validFiles.length === 0 || isUploading}>
-            {isUploading ? (
-              <>
-                <Loader2 className='w-4 h-4 animate-spin' />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <CloudUpload className='w-4 h-4' />
-                Upload files
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+              <div className='space-y-1.5'>
+                <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                  Content
+                </label>
+                <textarea
+                  value={pasteText}
+                  onChange={e => setPasteText(e.target.value)}
+                  placeholder='Paste or type your content here…'
+                  rows={10}
+                  className='w-full rounded-xl border border-input bg-transparent px-3 py-2.5 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-ring/60 resize-none font-mono leading-relaxed'
+                />
+                <p className='text-[10px] text-muted-foreground text-right'>
+                  {pasteText.length.toLocaleString()} characters
+                </p>
+              </div>
+
+              {renderError(pasteError)}
+            </div>
+
+            <Separator />
+            <DialogFooter className='border-t bg-muted/20 pb-8 pr-8'>
+              <Button variant='ghost' onClick={handleClose} disabled={isPasting}>Cancel</Button>
+              <Button onClick={() => void handlePasteSubmit()} disabled={!pasteText.trim() || isPasting}>
+                {isPasting ? (
+                  <><Loader2 className='w-4 h-4 animate-spin' />Saving...</>
+                ) : (
+                  <><ClipboardPaste className='w-4 h-4' />Save as document</>
+                )}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )

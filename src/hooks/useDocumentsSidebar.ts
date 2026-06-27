@@ -9,11 +9,11 @@ export function useDocumentsSidebar() {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const { selectedDocumentIds, toggleDocumentSelection, activeChatId } = useChat()
+  const { selectedDocumentIds, toggleDocumentSelection, activeChatId, documentRefetchVersion } = useChat()
   const { data, loading, error, refetch } = useQuery<{ documents: Document[] }>(GET_DOCUMENTS, {
     variables: { chatId: activeChatId }
   })
-  const [deleteDocument] = useMutation(DELETE_DOCUMENT)
+  const [deleteDocument, { loading: isDeletingDocument }] = useMutation(DELETE_DOCUMENT)
 
   const processingDocumentIds = useMemo(() => {
     return (
@@ -32,6 +32,11 @@ export function useDocumentsSidebar() {
 
     return () => clearInterval(interval)
   }, [processingDocumentIds.length, refetch])
+
+  useEffect(() => {
+    if (documentRefetchVersion === 0) return
+    void refetch()
+  }, [documentRefetchVersion, refetch])
 
   const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, documentId: string) => {
     event.stopPropagation()
@@ -83,6 +88,7 @@ export function useDocumentsSidebar() {
     handleDeleteDocument,
     handleUploadSuccess,
     setSelectedDocumentId,
-    activeChatId
+    activeChatId,
+    isDeletingDocument
   }
 }

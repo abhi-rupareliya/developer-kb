@@ -1,5 +1,12 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 
+export interface GraphQLContext {
+  supabase: SupabaseClient
+  user: User | null
+}
+
+// ── Document ─────────────────────────────────────────────────────────────────
+
 export interface Document {
   id: string
   user_id: string
@@ -20,6 +27,12 @@ export interface Document {
   updated_at: string
 }
 
+export interface DocumentChunk {
+  document_id: string
+  content: string
+  similarity: number
+}
+
 export interface CreateDocumentInput {
   chat_id?: string | null
   title: string
@@ -36,16 +49,13 @@ export interface CreateDocumentInput {
   metadata?: Record<string, unknown>
 }
 
-export interface GraphQLContext {
-  supabase: SupabaseClient
-  user: User | null
+export interface CreateDocumentResponse {
+  success: boolean
+  message: string
+  document: Document | null
 }
 
-export interface DocumentChunk {
-  document_id: string
-  content: string
-  similarity: number
-}
+// ── Chat ─────────────────────────────────────────────────────────────────────
 
 export type ChatMetadata = Record<string, unknown>
 
@@ -63,16 +73,18 @@ export interface CreateChatInput {
   metadata?: Record<string, unknown>
 }
 
+export interface UpdateChatInput {
+  title?: string
+  metadata?: Record<string, unknown>
+}
+
 export interface CreateChatResponse {
   success: boolean
   message: string
   chat: Chat | null
 }
 
-export interface UpdateChatInput {
-  title?: string
-  metadata?: Record<string, unknown>
-}
+// ── Message ───────────────────────────────────────────────────────────────────
 
 export type MessageMetadata = Record<string, unknown>
 
@@ -80,7 +92,6 @@ export type MessageRole = 'user' | 'assistant' | 'system'
 
 export interface Message {
   id: string
-
   chat_id: string
   role: MessageRole
   content: string
@@ -90,19 +101,23 @@ export interface Message {
 
 export interface PaginatedMessages {
   messages: Message[]
-  nextCursor: string | null
+  total: number
+  page: number
+  limit: number
+  totalPages: number
   hasMore: boolean
 }
 
 export interface CreateMessageInput {
   chat_id: string
-  role: 'user' | 'assistant' | 'system'
+  role: MessageRole
   content: string
   metadata?: Record<string, unknown>
 }
 
-export interface CreateMessageResponse {
+// ── Shared response types ─────────────────────────────────────────────────────
+
+export interface DeleteResponse {
   success: boolean
   message: string
-  createdMessage: Message | null
 }
