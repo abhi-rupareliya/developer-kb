@@ -13,10 +13,10 @@ interface ApolloProviderWrapperProps {
 
 export function ApolloProviderWrapper({ children }: ApolloProviderWrapperProps) {
   const { userId } = useAuth()
-  const apolloClient = useMemo(() => createApolloClient(), [])
+  const apolloClient = useMemo(() => createApolloClient(), [userId])
 
   return (
-    <ApolloProvider client={apolloClient} key={userId ?? 'anonymous'}>
+    <ApolloProvider client={apolloClient}>
       {children}
     </ApolloProvider>
   )
