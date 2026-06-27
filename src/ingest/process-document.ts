@@ -7,7 +7,7 @@ import { PROCESSING_STATUS } from '@/constants/Uploads'
 export const processDocument = inngest.createFunction(
   {
     id: 'process-document',
-    triggers: { event: 'document.uploaded' },
+    triggers: [{ event: 'document.uploaded' }],
     retries: 0,
     onFailure: async ({ event }) => {
       const supabase = createAdminClient()
