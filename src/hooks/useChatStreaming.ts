@@ -1,53 +1,58 @@
-import { useState, useCallback } from 'react'
+'use client'
+
+import { useCallback, useMemo, useRef } from 'react'
+import { useChat } from '@ai-sdk/react'
+import { TextStreamChatTransport, type UIMessage } from 'ai'
+
+function getMessageText(message?: UIMessage) {
+  if (!message) return ''
+
+  return message.parts
+    .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+    .map(part => part.text)
+    .join('')
+}
 
 export function useChatStreaming() {
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [streamedContent, setStreamedContent] = useState('')
+  const lastAssistantTextRef = useRef('')
 
-  const streamResponse = useCallback(async (question: string, documentIds: string[], chatId?: string) => {
-    setIsStreaming(true)
-    setStreamedContent('')
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          question,
-          documentIds,
-          chatId
+  const transport = useMemo(
+    () =>
+      new TextStreamChatTransport({
+        api: '/api/chat',
+        prepareSendMessagesRequest: ({ messages, body }) => ({
+          body: {
+            question: getMessageText(messages[messages.length - 1]),
+            documentIds: (body as { documentIds?: string[] } | undefined)?.documentIds ?? [],
+            chatId: (body as { chatId?: string | null } | undefined)?.chatId ?? null
+          }
         })
-      })
+      }),
+    []
+  )
 
-      if (!response.ok) {
-        throw new Error('Failed to get response')
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) return
-
-      const decoder = new TextDecoder()
-      let content = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value)
-        content += chunk
-        setStreamedContent(content)
-      }
-
-      return content
-    } catch (error) {
-      console.error('Streaming error:', error)
-      throw error
-    } finally {
-      setIsStreaming(false)
+  const { sendMessage, setMessages, status, messages } = useChat({
+    transport,
+    onFinish: ({ message }) => {
+      lastAssistantTextRef.current = getMessageText(message)
     }
-  }, [])
+  })
+
+  const isStreaming = status === 'submitted' || status === 'streaming'
+  const lastMessage = messages[messages.length - 1]
+  const streamedContent = lastMessage?.role === 'assistant' ? getMessageText(lastMessage) : ''
+
+  const streamResponse = useCallback(
+    async (question: string, documentIds: string[], chatId?: string) => {
+      lastAssistantTextRef.current = ''
+      setMessages([])
+
+      await sendMessage({ text: question }, { body: { documentIds, chatId: chatId ?? null } })
+
+      return lastAssistantTextRef.current
+    },
+    [sendMessage, setMessages]
+  )
 
   return {
     isStreaming,
